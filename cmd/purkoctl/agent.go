@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 )
@@ -29,9 +31,66 @@ var agentGetCmd = &cobra.Command{
 	RunE:  runAgentGet,
 }
 
+var agentCreateFile string
+
+var agentCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create an agent from a YAML file",
+	RunE:  runAgentCreate,
+}
+
+var agentDeleteCmd = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete an agent",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runAgentDelete,
+}
+
 func init() {
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentGetCmd)
+	agentCreateCmd.Flags().StringVarP(&agentCreateFile, "file", "f", "", "Path to agent YAML file (required)")
+	agentCreateCmd.MarkFlagRequired("file")
+	agentCmd.AddCommand(agentCreateCmd)
+	agentCmd.AddCommand(agentDeleteCmd)
+}
+
+func runAgentCreate(cmd *cobra.Command, args []string) error {
+	data, err := os.ReadFile(agentCreateFile)
+	if err != nil {
+		return fmt.Errorf("unable to read file %q: %w", agentCreateFile, err)
+	}
+
+	var agent v1alpha1.Agent
+	if err := yaml.Unmarshal(data, &agent); err != nil {
+		return fmt.Errorf("unable to parse agent YAML: %w", err)
+	}
+
+	if agent.Namespace == "" {
+		agent.Namespace = namespace
+	}
+
+	if err := k8sClient.Create(context.TODO(), &agent); err != nil {
+		return fmt.Errorf("unable to create agent %q: %w", agent.Name, err)
+	}
+
+	fmt.Printf("Agent %s created in namespace %s\n", agent.Name, agent.Namespace)
+	return nil
+}
+
+func runAgentDelete(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	var agent v1alpha1.Agent
+	if err := k8sClient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, &agent); err != nil {
+		return fmt.Errorf("agent %q not found in namespace %q", name, namespace)
+	}
+
+	if err := k8sClient.Delete(context.TODO(), &agent); err != nil {
+		return fmt.Errorf("unable to delete agent %q: %w", name, err)
+	}
+
+	fmt.Printf("Agent %s deleted from namespace %s\n", name, namespace)
+	return nil
 }
 
 func runAgentList(cmd *cobra.Command, args []string) error {

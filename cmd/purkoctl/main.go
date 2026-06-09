@@ -102,6 +102,8 @@ func main() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(workflowCmd)
+	rootCmd.AddCommand(mcpCmd)
+	rootCmd.AddCommand(llmCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

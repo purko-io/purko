@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 )
@@ -82,6 +83,21 @@ var workflowRerunCmd = &cobra.Command{
 	RunE:  runWorkflowRerun,
 }
 
+var workflowCreateFile string
+
+var workflowCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create a workflow from a YAML file",
+	RunE:  runWorkflowCreate,
+}
+
+var workflowDeleteCmd = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete a workflow",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runWorkflowDelete,
+}
+
 func init() {
 	workflowCmd.AddCommand(workflowListCmd)
 	workflowCmd.AddCommand(workflowGetCmd)
@@ -93,6 +109,48 @@ func init() {
 	workflowCmd.AddCommand(workflowDenyCmd)
 	workflowCmd.AddCommand(workflowCancelCmd)
 	workflowCmd.AddCommand(workflowRerunCmd)
+	workflowCreateCmd.Flags().StringVarP(&workflowCreateFile, "file", "f", "", "Path to workflow YAML file (required)")
+	workflowCreateCmd.MarkFlagRequired("file")
+	workflowCmd.AddCommand(workflowCreateCmd)
+	workflowCmd.AddCommand(workflowDeleteCmd)
+}
+
+func runWorkflowCreate(cmd *cobra.Command, args []string) error {
+	data, err := os.ReadFile(workflowCreateFile)
+	if err != nil {
+		return fmt.Errorf("unable to read file %q: %w", workflowCreateFile, err)
+	}
+
+	var wf v1alpha1.Workflow
+	if err := yaml.Unmarshal(data, &wf); err != nil {
+		return fmt.Errorf("unable to parse workflow YAML: %w", err)
+	}
+
+	if wf.Namespace == "" {
+		wf.Namespace = namespace
+	}
+
+	if err := k8sClient.Create(context.TODO(), &wf); err != nil {
+		return fmt.Errorf("unable to create workflow %q: %w", wf.Name, err)
+	}
+
+	fmt.Printf("Workflow %s created in namespace %s\n", wf.Name, wf.Namespace)
+	return nil
+}
+
+func runWorkflowDelete(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	var wf v1alpha1.Workflow
+	if err := k8sClient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, &wf); err != nil {
+		return fmt.Errorf("workflow %q not found in namespace %q", name, namespace)
+	}
+
+	if err := k8sClient.Delete(context.TODO(), &wf); err != nil {
+		return fmt.Errorf("unable to delete workflow %q: %w", name, err)
+	}
+
+	fmt.Printf("Workflow %s deleted from namespace %s\n", name, namespace)
+	return nil
 }
 
 func runWorkflowList(cmd *cobra.Command, args []string) error {
