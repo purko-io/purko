@@ -1,5 +1,5 @@
 operator:
-  image: ghcr.io/geored/purko/operator:latest
+  image: ghcr.io/purko-io/purko-operator:latest
   replicas: 1
   resources:
     requests:
@@ -25,10 +25,10 @@ operator:
     minAvailable: 1
 
 executor:
-  image: ghcr.io/geored/purko/executor:latest
+  image: ghcr.io/purko-io/purko-executor:latest
   variants:
-    git: ghcr.io/geored/purko/executor:git
-    dev: ghcr.io/geored/purko/executor:dev
+    git: ghcr.io/purko-io/purko-executor:git
+    dev: ghcr.io/purko-io/purko-executor:dev
 
 llm:
   # Provider: vertex-ai | anthropic | openai | "" (auto-detect from env)

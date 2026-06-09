@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./... -v -count=1
+
+      - name: Vet
+        run: go vet ./...
+
+  build-operator:
+    name: Build Operator Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push operator
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/purko-io/purko-operator:${{ steps.version.outputs.VERSION }}
+            ghcr.io/purko-io/purko-operator:latest
+
+  build-executor:
+    name: Build Executor Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push executor
+        uses: docker/build-push-action@v6
+        with:
+          context: ./executor
+          file: ./executor/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/purko-io/purko-executor:${{ steps.version.outputs.VERSION }}
+            ghcr.io/purko-io/purko-executor:latest
+
+  helm-chart:
+    name: Publish Helm Chart
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Package chart
+        run: |
+          sed -i "s/version: .*/version: ${{ steps.version.outputs.VERSION }}/" deploy/helm/Chart.yaml
+          sed -i "s/appVersion: .*/appVersion: \"${{ steps.version.outputs.VERSION }}\"/" deploy/helm/Chart.yaml
+          helm package deploy/helm/
+
+      - name: Push to GHCR
+        run: helm push purko-*.tgz oci://ghcr.io/purko-io
+
+  github-release:
+    name: Create GitHub Release
+    needs: [build-operator, build-executor, helm-chart]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | head -2 | tail -1)
+          if [ -z "$PREV_TAG" ]; then
+            echo "CHANGELOG=Initial release" >> $GITHUB_OUTPUT
+          else
+            CHANGES=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" | head -50)
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Purko ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Purko ${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+
+            **Helm (OCI):**
+            ```bash
+            helm install purko oci://ghcr.io/purko-io/purko --version ${{ steps.version.outputs.VERSION }}
+            ```
+
+            **Container Images:**
+            ```
+            ghcr.io/purko-io/purko-operator:${{ steps.version.outputs.VERSION }}
+            ghcr.io/purko-io/purko-executor:${{ steps.version.outputs.VERSION }}
+            ```
+
+            ### Changes
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+          draft: false
+          prerelease: false
