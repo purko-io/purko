@@ -16,13 +16,67 @@ Define AI agents as Kubernetes custom resources, wire them into DAG workflows, c
 
 ## Quick Start
 
-### Install
+### 1. Install Purko
 
+**Option A: Helm chart from OCI registry (recommended)**
 ```bash
+helm install purko oci://ghcr.io/purko-io/purko
+```
+
+**Option B: From source**
+```bash
+git clone https://github.com/purko-io/purko.git
+cd purko
 helm install purko deploy/helm/
 ```
 
-### Create an Agent
+Verify the operator is running:
+```bash
+kubectl get pods -n purko-system
+```
+
+### 2. Configure an LLM Provider
+
+Purko needs an LLM provider to power your agents. Choose one and apply:
+
+**Anthropic (direct API):**
+```bash
+kubectl create secret generic anthropic-key \
+  -n purko-system --from-literal=api-key=YOUR_API_KEY
+
+kubectl apply -f examples/llm-providers/anthropic-direct.yaml
+```
+
+**OpenAI:**
+```bash
+kubectl create secret generic openai-key \
+  -n purko-system --from-literal=api-key=YOUR_API_KEY
+
+cat <<EOF | kubectl apply -f -
+apiVersion: purko.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: openai
+  namespace: purko-system
+spec:
+  type: openai
+  apiFormat: openai
+  model: gpt-4o
+  credentials:
+    secretRef: openai-key
+    secretKey: api-key
+  default: true
+EOF
+```
+
+**Ollama (free, local):**
+```bash
+kubectl apply -f examples/llm-providers/ollama.yaml
+```
+
+See `examples/llm-providers/` for more options (Vertex AI, OpenRouter).
+
+### 3. Create an Agent
 
 ```yaml
 apiVersion: purko.io/v1alpha1
@@ -52,7 +106,7 @@ kubectl apply -f my-writer.yaml
 purkoctl agent list
 ```
 
-### Create a Workflow
+### 4. Create a Workflow
 
 ```yaml
 apiVersion: purko.io/v1alpha1
@@ -77,6 +131,18 @@ spec:
 kubectl apply -f my-pipeline.yaml
 purkoctl workflow trigger my-pipeline
 purkoctl workflow get my-pipeline
+purkoctl workflow logs my-pipeline write
+```
+
+### 5. Install purkoctl CLI
+
+```bash
+go install github.com/purko-io/purko/cmd/purkoctl@latest
+```
+
+Or build from source:
+```bash
+go build -o bin/purkoctl ./cmd/purkoctl/
 ```
 
 ## Agent Types
@@ -95,7 +161,13 @@ purkoctl workflow get my-pipeline
 - **7 starter agents** — router, researcher, writer, reviewer, analyst, communicator, coordinator
 - **13 SDLC agents** — full software development lifecycle
 - **6 SRE agents** — incident response, capacity planning, remediation
-- **13 workflow templates** — review pipelines, research reports, SDLC automation
+- **17 workflow templates** — review pipelines, research reports, SDLC automation
+
+Deploy the starter agents:
+```bash
+kubectl apply -f examples/agents/starter/
+kubectl apply -f examples/workflows/starter/
+```
 
 ## Documentation
 
