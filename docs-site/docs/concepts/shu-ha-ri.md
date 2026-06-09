@@ -1,3 +1,6 @@
+!!! info "Pro Feature"
+    Automatic Shu-Ha-Ri progression (promotion and demotion of agents) requires Purko Pro. In the Community edition, you can manually set autonomy levels on agents, but automatic progression based on success rate and action count is a Pro feature. [Learn more →](../community/roadmap.md)
+
 # Shu-Ha-Ri Autonomy
 
 **Shu-Ha-Ri** (守破離) is a concept from Japanese martial arts describing three stages of mastery: obey, break, and transcend. Purko uses it as a graduated autonomy model — agents earn the right to act independently by demonstrating reliability over time.

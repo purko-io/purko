@@ -1,3 +1,6 @@
+!!! info "Pro Feature"
+    The Intent Bar is part of the Purko Pro web dashboard. Community edition users create workflows via YAML and kubectl. [Learn more →](../community/roadmap.md)
+
 # Intent Bar: Natural Language Workflow Design
 
 The Intent Bar lets you describe a workflow in plain English and have Purko generate the complete YAML for you. Instead of manually writing steps, dependencies, and agent references, you type what you want and the platform figures out how to build it.

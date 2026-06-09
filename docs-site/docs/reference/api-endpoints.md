@@ -1,3 +1,6 @@
+!!! info "Pro Feature"
+    The Dashboard API is part of Purko Pro. Community edition users manage agents and workflows via purkoctl CLI and kubectl. [Learn more →](../community/roadmap.md)
+
 # Dashboard API
 
 The Purko dashboard exposes a REST API used by the web UI and available for automation. All endpoints are served on the dashboard port (default `8080`). Responses are JSON. CORS headers are set to `*` on all endpoints.

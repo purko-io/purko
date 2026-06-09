@@ -124,9 +124,9 @@ The short names (`ag`, `wf`, `mcp`, `llm`) can be used anywhere you would type t
 
 ---
 
-## Step 3 — Access the dashboard
+## Step 3 — Access the Dashboard (Pro)
 
-The Purko dashboard provides a UI for creating agents, monitoring workflows, and browsing MCP tool catalogs.
+The Purko dashboard is available in Purko Pro. It provides a UI for creating agents, monitoring workflows, and browsing MCP tool catalogs. Community edition users manage everything via purkoctl CLI and kubectl.
 
 ```bash
 kubectl port-forward -n purko-system deploy/purko-operator 8082:8082

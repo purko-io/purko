@@ -10,7 +10,7 @@ This tutorial deploys a **code reviewer** agent and shows you how to inspect it 
 
 - Purko installed and the operator running ([Installation](installation.md))
 - `kubectl` configured to point at your cluster
-- Port-forward to the dashboard running: `kubectl port-forward -n purko-system deploy/purko-operator 8082:8082`
+- Port-forward to the dashboard (Pro feature): `kubectl port-forward -n purko-system deploy/purko-operator 8082:8082`
 
 ---
 
