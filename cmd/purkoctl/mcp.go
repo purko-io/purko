@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 )
@@ -37,8 +39,35 @@ var mcpTestCmd = &cobra.Command{
 	RunE:  runMCPTest,
 }
 
+var mcpGetCmd = &cobra.Command{
+	Use:   "get <name>",
+	Short: "Show detailed info for an MCP server",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runMCPGet,
+}
+
+var mcpCreateFile string
+
+var mcpCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create an MCP server from a YAML file",
+	RunE:  runMCPCreate,
+}
+
+var mcpDeleteCmd = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete an MCP server",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runMCPDelete,
+}
+
 func init() {
 	mcpCmd.AddCommand(mcpListCmd)
+	mcpCmd.AddCommand(mcpGetCmd)
+	mcpCreateCmd.Flags().StringVarP(&mcpCreateFile, "file", "f", "", "Path to MCPServer YAML file (required)")
+	mcpCreateCmd.MarkFlagRequired("file")
+	mcpCmd.AddCommand(mcpCreateCmd)
+	mcpCmd.AddCommand(mcpDeleteCmd)
 	mcpCmd.AddCommand(mcpToolsCmd)
 	mcpCmd.AddCommand(mcpTestCmd)
 }
@@ -191,5 +220,103 @@ func runMCPTest(cmd *cobra.Command, args []string) error {
 	if strings.EqualFold(phase, "error") && server.Status.Message != "" {
 		fmt.Printf("Error: %s\n", server.Status.Message)
 	}
+	return nil
+}
+
+func runMCPGet(cmd *cobra.Command, args []string) error {
+	name := args[0]
+
+	var server v1alpha1.MCPServer
+	if err := k8sClient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, &server); err != nil {
+		items, listErr := listMCPServers()
+		if listErr != nil {
+			return fmt.Errorf("mcp server %q not found in namespace %q", name, namespace)
+		}
+		found := false
+		for _, s := range items {
+			if s.Name == name {
+				server = s
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("mcp server %q not found", name)
+		}
+	}
+
+	if outputFmt == "json" {
+		return printJSON(server)
+	}
+
+	fmt.Printf("Name:         %s\n", server.Name)
+	fmt.Printf("Namespace:    %s\n", server.Namespace)
+	fmt.Printf("Image:        %s\n", server.Spec.Image)
+	fmt.Printf("Port:         %d\n", server.Spec.Port)
+	fmt.Printf("Auth:         %s\n", server.Spec.Auth)
+	fmt.Printf("Category:     %s\n", server.Spec.Category)
+	fmt.Printf("Phase:        %s\n", server.Status.Phase)
+	fmt.Printf("Tools:        %d\n", server.Status.ToolCount)
+	fmt.Printf("Age:          %s\n", formatAge(server.CreationTimestamp))
+
+	if server.Status.Message != "" {
+		fmt.Printf("Message:      %s\n", server.Status.Message)
+	}
+
+	if len(server.Status.Conditions) > 0 {
+		fmt.Println()
+		fmt.Println("Conditions:")
+		condHeaders := []string{"  TYPE", "STATUS", "REASON", "MESSAGE"}
+		condRows := make([][]string, 0, len(server.Status.Conditions))
+		for _, c := range server.Status.Conditions {
+			condRows = append(condRows, []string{
+				"  " + c.Type,
+				string(c.Status),
+				c.Reason,
+				c.Message,
+			})
+		}
+		printTable(condHeaders, condRows)
+	}
+
+	return nil
+}
+
+func runMCPCreate(cmd *cobra.Command, args []string) error {
+	data, err := os.ReadFile(mcpCreateFile)
+	if err != nil {
+		return fmt.Errorf("unable to read file %q: %w", mcpCreateFile, err)
+	}
+
+	var server v1alpha1.MCPServer
+	if err := yaml.Unmarshal(data, &server); err != nil {
+		return fmt.Errorf("unable to parse YAML: %w", err)
+	}
+
+	if server.Namespace == "" {
+		server.Namespace = namespace
+	}
+
+	if err := k8sClient.Create(context.TODO(), &server); err != nil {
+		return fmt.Errorf("unable to create MCP server: %w", err)
+	}
+
+	fmt.Printf("MCPServer %s created in namespace %s\n", server.Name, server.Namespace)
+	return nil
+}
+
+func runMCPDelete(cmd *cobra.Command, args []string) error {
+	name := args[0]
+
+	var server v1alpha1.MCPServer
+	if err := k8sClient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, &server); err != nil {
+		return fmt.Errorf("mcp server %q not found in namespace %q", name, namespace)
+	}
+
+	if err := k8sClient.Delete(context.TODO(), &server); err != nil {
+		return fmt.Errorf("unable to delete mcp server %q: %w", name, err)
+	}
+
+	fmt.Printf("MCPServer %s deleted from namespace %s\n", name, namespace)
 	return nil
 }
