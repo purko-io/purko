@@ -1,0 +1,54 @@
+apiVersion: purko.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: vertex-ai
+  namespace: purko-system
+spec:
+  type: vertex-ai
+  apiFormat: anthropic
+  model: claude-sonnet-4-6
+  config:
+    projectId: your-gcp-project-id
+    region: us-east5
+  models:
+    - name: claude-sonnet-4-6
+      displayName: Claude Sonnet 4.6
+      pricing:
+        inputPerMToken: 3
+        outputPerMToken: 15
+    - name: claude-opus-4-6
+      displayName: Claude Opus 4.6
+      pricing:
+        inputPerMToken: 15
+        outputPerMToken: 75
+    - name: claude-haiku-4-5
+      displayName: Claude Haiku 4.5
+      pricing:
+        inputPerMToken: 0.8
+        outputPerMToken: 4
+  credentials:
+    secretRef: gcp-credentials
+    secretKey: credentials.json
+  healthCheck:
+    enabled: true
+    intervalSeconds: 300
+  default: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gcp-credentials
+  namespace: purko-system
+type: Opaque
+stringData:
+  credentials.json: |
+    {
+      "type": "service_account",
+      "project_id": "your-gcp-project-id",
+      "private_key_id": "YOUR-KEY-ID",
+      "private_key": "-----BEGIN PRIVATE KEY-----\nYOUR-PRIVATE-KEY\n-----END PRIVATE KEY-----\n",
+      "client_email": "purko@your-gcp-project-id.iam.gserviceaccount.com",
+      "client_id": "YOUR-CLIENT-ID",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token"
+    }

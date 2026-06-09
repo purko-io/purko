@@ -1,0 +1,482 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: workflows.purko.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: purko.io
+  names:
+    kind: Workflow
+    listKind: WorkflowList
+    plural: workflows
+    singular: workflow
+    shortNames:
+    - wf
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Steps
+      type: integer
+      jsonPath: .status.totalSteps
+    - name: Completed
+      type: integer
+      jsonPath: .status.completedSteps
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: Workflow defines a multi-step orchestration of Agents to accomplish
+          complex tasks.
+        properties:
+          apiVersion:
+            type: string
+            description: APIVersion defines the versioned schema of this representation
+              of an object.
+          kind:
+            type: string
+            description: Kind is a string value representing the REST resource this
+              object represents.
+          spec:
+            type: object
+            description: WorkflowSpec defines the desired state of a Workflow.
+            required:
+            - steps
+            properties:
+              description:
+                type: string
+                description: Human-readable description of the workflow.
+              steps:
+                type: array
+                description: Ordered list of workflow steps.
+                items:
+                  type: object
+                  description: A single step in the workflow execution.
+                  required:
+                  - name
+                  properties:
+                    name:
+                      type: string
+                      description: Unique name for this step.
+                      minLength: 1
+                      x-kubernetes-preserve-unknown-fields: true
+                    agentRef:
+                      type: object
+                      description: Reference to an Agent resource.
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the Agent resource.
+                        namespace:
+                          type: string
+                          description: Namespace of the Agent resource.
+                      required:
+                      - name
+                      x-kubernetes-preserve-unknown-fields: true
+                    description:
+                      type: string
+                      description: Human-readable description of what this step does.
+                      x-kubernetes-preserve-unknown-fields: true
+                    output:
+                      type: object
+                      description: Output configuration for this step.
+                      properties:
+                        key:
+                          type: string
+                          description: Key to store the step output under.
+                        format:
+                          type: string
+                          description: Format of the output data (e.g., json, text,
+                            binary).
+                      x-kubernetes-preserve-unknown-fields: true
+                    retryPolicy:
+                      type: object
+                      description: Retry configuration for this step.
+                      properties:
+                        maxRetries:
+                          type: integer
+                          description: Maximum number of retry attempts.
+                          minimum: 0
+                          default: 3
+                        backoff:
+                          type: string
+                          description: Backoff strategy or duration between retries
+                            (e.g., 1s, exponential).
+                        retryOn:
+                          type: array
+                          description: Conditions that trigger a retry.
+                          items:
+                            type: string
+                            description: A retry condition (e.g., error code or pattern).
+                            x-kubernetes-preserve-unknown-fields: true
+                      x-kubernetes-preserve-unknown-fields: true
+                    timeout:
+                      type: object
+                      description: Timeout configuration for this step
+                      x-kubernetes-preserve-unknown-fields: true
+                    config:
+                      type: object
+                      description: Step-specific configuration
+                      x-kubernetes-preserve-unknown-fields: true
+                    type:
+                      type: string
+                      description: Step type (e.g., agent, notification, approval)
+                    input:
+                      type: object
+                      description: Input data for this step.
+                      x-kubernetes-preserve-unknown-fields: true
+                    inputFrom:
+                      type: array
+                      description: References to outputs from previous steps.
+                      items:
+                        type: object
+                        description: Reference to a previous step output.
+                        properties:
+                          step:
+                            type: string
+                            description: Name of the source step.
+                          outputKey:
+                            type: string
+                            description: Key of the output to reference.
+                        x-kubernetes-preserve-unknown-fields: true
+                      x-kubernetes-preserve-unknown-fields: true
+                    dependsOn:
+                      type: array
+                      description: Steps that must complete before this step.
+                      items:
+                        type: string
+                        description: Name of a prerequisite step.
+                        x-kubernetes-preserve-unknown-fields: true
+                      x-kubernetes-preserve-unknown-fields: true
+                    condition:
+                      type: string
+                      description: Expression to evaluate before running step (e.g. steps.scan.output.issues > 0).
+                  x-kubernetes-preserve-unknown-fields: true
+                minItems: 1
+                x-kubernetes-preserve-unknown-fields: true
+              trigger:
+                type: object
+                description: Trigger configuration for automatic workflow execution.
+                properties:
+                  type:
+                    type: string
+                    description: Type of trigger (e.g., manual, schedule, event, webhook).
+                  schedule:
+                    type: object
+                    description: Schedule-based trigger
+                    x-kubernetes-preserve-unknown-fields: true
+                  event:
+                    type: object
+                    description: Event-based trigger configuration.
+                    properties:
+                      source:
+                        type: string
+                        description: Event source identifier.
+                      type:
+                        type: string
+                        description: Event type to match.
+                      filter:
+                        type: string
+                        description: CEL expression to filter events.
+                    x-kubernetes-preserve-unknown-fields: true
+                  webhook:
+                    type: object
+                    description: Webhook trigger configuration.
+                    properties:
+                      path:
+                        type: string
+                        description: HTTP path for the webhook endpoint.
+                      secret:
+                        type: string
+                        description: Secret name for webhook validation.
+                    x-kubernetes-preserve-unknown-fields: true
+                  eventTriggers:
+                    type: array
+                    description: Event-based triggers
+                    x-kubernetes-preserve-unknown-fields: true
+                    items:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              edges:
+                type: array
+                description: Explicit edges defining step execution order and conditional
+                  flow.
+                items:
+                  type: object
+                  description: An edge connecting two workflow steps.
+                  properties:
+                    from:
+                      type: string
+                      description: Name of the source step.
+                      x-kubernetes-preserve-unknown-fields: true
+                    to:
+                      type: string
+                      description: Name of the target step.
+                      x-kubernetes-preserve-unknown-fields: true
+                    condition:
+                      type: object
+                      description: Condition for edge transition
+                      x-kubernetes-preserve-unknown-fields: true
+                  x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              variables:
+                type: array
+                description: Workflow variables
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              concurrency:
+                type: object
+                description: Concurrency control for workflow execution.
+                properties:
+                  policy:
+                    type: string
+                    description: Concurrency policy (e.g., allow, forbid, replace).
+                  maxParallel:
+                    type: integer
+                    description: Maximum number of parallel workflow instances.
+                    minimum: 1
+                x-kubernetes-preserve-unknown-fields: true
+              errorHandling:
+                type: object
+                description: Error handling strategy for the workflow.
+                properties:
+                  strategy:
+                    type: string
+                    description: Error handling strategy (e.g., failFast, continueOnError,
+                      rollback).
+                  fallbackWorkflow:
+                    type: string
+                    description: Name of a fallback workflow to execute on failure.
+                  continueOnError:
+                    type: boolean
+                    description: Whether to continue executing remaining steps on
+                      error.
+                x-kubernetes-preserve-unknown-fields: true
+              observability:
+                type: object
+                description: Observability configuration for workflow monitoring.
+                properties:
+                  metrics:
+                    type: object
+                    description: Metrics collection configuration.
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Whether metrics collection is enabled.
+                      port:
+                        type: integer
+                        description: Port to expose metrics on.
+                      path:
+                        type: string
+                        description: HTTP path for metrics endpoint.
+                    x-kubernetes-preserve-unknown-fields: true
+                  logging:
+                    type: object
+                    description: Logging configuration.
+                    properties:
+                      level:
+                        type: string
+                        description: Log level.
+                        enum:
+                        - debug
+                        - info
+                        - warn
+                        - error
+                      format:
+                        type: string
+                        description: Log output format.
+                        enum:
+                        - json
+                        - text
+                    x-kubernetes-preserve-unknown-fields: true
+                  tracing:
+                    type: object
+                    description: Distributed tracing configuration.
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Whether tracing is enabled.
+                      endpoint:
+                        type: string
+                        description: Tracing collector endpoint.
+                      samplingRate:
+                        type: number
+                        description: Trace sampling rate.
+                        minimum: 0
+                        maximum: 1
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              timeout:
+                type: object
+                description: Overall workflow timeout.
+                x-kubernetes-preserve-unknown-fields: true
+              parallelism:
+                type: integer
+                description: Maximum number of steps to run in parallel.
+                minimum: 1
+                default: 1
+              failureStrategy:
+                type: string
+                description: Strategy when a step fails.
+                enum:
+                - failFast
+                - continueOnError
+                - rollback
+                default: failFast
+              parameters:
+                type: object
+                description: Input parameters for variable substitution in step inputs.
+                additionalProperties:
+                  type: string
+              schedule:
+                type: string
+                description: Cron schedule for recurring workflows.
+              hooks:
+                type: object
+                description: Lifecycle hooks for workflow events.
+                properties:
+                  onStart:
+                    type: object
+                    description: Hook triggered when workflow starts.
+                    properties:
+                      webhook:
+                        type: string
+                        description: Webhook URL to invoke on start.
+                    x-kubernetes-preserve-unknown-fields: true
+                  onComplete:
+                    type: object
+                    description: Hook triggered when workflow completes.
+                    properties:
+                      webhook:
+                        type: string
+                        description: Webhook URL to invoke on completion.
+                    x-kubernetes-preserve-unknown-fields: true
+                  onFailure:
+                    type: object
+                    description: Hook triggered when workflow fails.
+                    properties:
+                      webhook:
+                        type: string
+                        description: Webhook URL to invoke on failure.
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            description: WorkflowStatus defines the observed state of a Workflow.
+            properties:
+              phase:
+                type: string
+                description: Current phase of the workflow.
+                enum:
+                - Pending
+                - Running
+                - Succeeded
+                - Failed
+                - Cancelled
+              conditions:
+                type: array
+                description: Conditions represent the latest observations of the workflow
+                  state.
+                items:
+                  type: object
+                  description: A condition describing an aspect of the workflow state.
+                  properties:
+                    type:
+                      type: string
+                      description: Type of condition.
+                    status:
+                      type: string
+                      description: Status of the condition.
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                    lastTransitionTime:
+                      type: string
+                      description: Last time the condition transitioned.
+                      format: date-time
+                    reason:
+                      type: string
+                      description: Machine-readable reason for the condition.
+                    message:
+                      type: string
+                      description: Human-readable message for the condition.
+                  x-kubernetes-preserve-unknown-fields: true
+              message:
+                type: string
+                description: Human-readable message describing the current workflow
+                  status.
+              observedGeneration:
+                type: integer
+                description: Most recent generation observed by the controller.
+                format: int64
+              startTime:
+                type: string
+                description: Time when the workflow execution started.
+                format: date-time
+              completionTime:
+                type: string
+                description: Time when the workflow execution completed.
+                format: date-time
+              totalSteps:
+                type: integer
+                description: Total number of steps in the workflow.
+              completedSteps:
+                type: integer
+                description: Number of steps that completed successfully.
+              failedSteps:
+                type: integer
+                description: Number of steps that failed.
+              stepStatuses:
+                type: array
+                description: Status of individual workflow steps.
+                items:
+                  type: object
+                  description: Status of a single workflow step.
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the step.
+                    phase:
+                      type: string
+                      description: Current phase of the step.
+                      enum:
+                      - Pending
+                      - Running
+                      - Succeeded
+                      - Failed
+                      - Skipped
+                    startTime:
+                      type: string
+                      description: Time when the step started.
+                      format: date-time
+                    completionTime:
+                      type: string
+                      description: Time when the step completed.
+                      format: date-time
+                    output:
+                      type: object
+                      description: Output data from the step.
+                      x-kubernetes-preserve-unknown-fields: true
+                    error:
+                      type: string
+                      description: Error message if the step failed.
+                    retryCount:
+                      type: integer
+                      description: Number of retry attempts for this step.
+                  x-kubernetes-preserve-unknown-fields: true
+            x-kubernetes-preserve-unknown-fields: true
+        x-kubernetes-preserve-unknown-fields: true

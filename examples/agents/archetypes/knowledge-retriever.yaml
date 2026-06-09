@@ -1,0 +1,43 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: knowledge-retriever
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: archetypes
+spec:
+  type: retriever
+  autonomyLevel: restricted
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.3
+  role: knowledge-retriever
+  memory:
+    type: vector
+    maxContextTokens: 32768
+    persistentStorage:
+      enabled: true
+      volumeClaimRef: knowledge-retriever-memory
+  guardrails:
+    maxIterations: 15
+    maxExecutionTime: "5m"
+    costLimitUSD: 8.0
+  systemPrompt: |
+    You are a research agent. Search the knowledge base for
+    relevant information, synthesize findings, and provide
+    comprehensive answers with citations.
+    Use vector-search to find relevant previous research from your memory.
+  tools:
+    - name: vector-search
+      type: function
+    - name: search_code
+      type: mcp
+    - name: get_file_contents
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: semantic_log_search
+      type: mcp
+    - name: analyze_logs
+      type: mcp

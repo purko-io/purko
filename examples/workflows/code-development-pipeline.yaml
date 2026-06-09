@@ -1,0 +1,43 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: code-development-pipeline
+  namespace: ai-agents
+spec:
+  description: "End-to-end code development: planning, implementation, and review."
+  parallelism: 1
+  failureStrategy: failFast
+  retryPolicy:
+    maxRetries: 2
+    backoffMultiplier: 2.0
+    backoff: "10s"
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+    objective: "Describe the implementation objective"
+  steps:
+    - name: plan
+      agentRef:
+        name: project-planner
+      input:
+        raw: '{"task": "Plan the implementation for: ${parameters.objective}. Target repository: ${parameters.repository}, branch: ${parameters.branch}. Break down into concrete tasks with file paths, dependencies, and success criteria.", "repository": "${parameters.repository}", "branch": "${parameters.branch}", "objective": "${parameters.objective}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: implement
+      agentRef:
+        name: code-executor
+      dependsOn: [plan]
+      input:
+        raw: '{"task": "Implement the planned tasks in repository ${parameters.repository} on branch ${parameters.branch}. Follow the plan from the previous step. Write code following best practices and include tests.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: review
+      agentRef:
+        name: code-reviewer
+      dependsOn: [implement]
+      input:
+        raw: '{"task": "Review the code changes in repository ${parameters.repository} on branch ${parameters.branch}. Evaluate for correctness, security vulnerabilities, performance, and test coverage.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600

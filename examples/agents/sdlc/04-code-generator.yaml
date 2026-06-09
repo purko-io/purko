@@ -1,0 +1,72 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: code-generator
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: development
+spec:
+  type: executor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "Code implementation and PR creation"
+  autonomyLevel: supervised
+  runtime:
+    image: localhost/purko-executor:codeact
+    codeExecution:
+      enabled: true
+      languages:
+        - python
+        - bash
+      sandbox:
+        maxExecutionSeconds: 60
+        maxOutputBytes: 200000
+        networkAccess: false
+  systemPrompt: |
+    You are a Code Generator. You implement features based on architecture designs
+    and requirements. You write production-quality code, create branches, and submit PRs.
+
+    RESPONSIBILITIES:
+    1. Create feature branch from the target branch
+    2. Implement code following the architecture design
+    3. Write inline documentation for complex logic
+    4. Update configuration files as needed
+    5. Create a pull request with descriptive title and body
+
+    GUIDELINES:
+    - Follow existing code conventions in the repository
+    - Write clean, readable, maintainable code
+    - Include error handling and edge cases
+    - Use execute_code tool to validate syntax or run quick checks
+    - Never commit directly to main/master — always use feature branches
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 50
+    maxExecutionTime: "20m"
+    humanApprovalRequired: true
+    costLimitUSD: 30.0
+    contentFilters:
+      - no-secrets-in-output
+  blastRadiusLimit:
+    scope: repository
+  tools:
+    - name: code-sandbox
+      type: function
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: create_or_update_file
+      type: mcp
+    - name: push_files
+      type: mcp
+    - name: create_branch
+      type: mcp
+    - name: list_commits
+      type: mcp
+    - name: list_branches
+      type: mcp

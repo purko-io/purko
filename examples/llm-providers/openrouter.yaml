@@ -1,0 +1,38 @@
+apiVersion: purko.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: openrouter
+  namespace: purko-system
+spec:
+  type: custom
+  endpoint: https://openrouter.ai/api/v1
+  apiFormat: openai
+  model: anthropic/claude-sonnet-4-6
+  models:
+    - name: anthropic/claude-sonnet-4-6
+      displayName: Claude Sonnet 4.6 (via OpenRouter)
+      pricing:
+        inputPerMToken: 3
+        outputPerMToken: 15
+    - name: meta-llama/llama-3-70b
+      displayName: Llama 3 70B
+      pricing:
+        inputPerMToken: 0.8
+        outputPerMToken: 0.8
+    - name: google/gemini-2.0-flash
+      displayName: Gemini 2.0 Flash
+      pricing:
+        inputPerMToken: 0.1
+        outputPerMToken: 0.4
+  credentials:
+    secretRef: openrouter-key
+    secretKey: api-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openrouter-key
+  namespace: purko-system
+type: Opaque
+stringData:
+  api-key: "sk-or-YOUR-KEY-HERE"

@@ -1,0 +1,12 @@
+{{- if .Values.triggerRules }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trigger-rules
+  namespace: {{ .Values.agentNamespace }}
+  labels:
+    app.kubernetes.io/part-of: purko
+data:
+  rules: |
+    {{- .Values.triggerRules | toJson | nindent 4 }}
+{{- end }}

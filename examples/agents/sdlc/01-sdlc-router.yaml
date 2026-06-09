@@ -1,0 +1,68 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: sdlc-router
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: all
+spec:
+  type: router
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "SDLC work item classifier and routing dispatcher"
+  autonomyLevel: supervised
+  instructions: |
+    Classify every incoming request within 30 seconds.
+    Never modify code, infrastructure, or documentation directly.
+    Log routing decisions with confidence scores for audit.
+  systemPrompt: |
+    You are an SDLC Router. Your sole responsibility is to classify incoming work items
+    and route them to the correct specialist agent for processing.
+
+    Classification taxonomy:
+    - requirements/feature-request → requirements-analyst
+    - architecture/design-review → architecture-designer
+    - implementation/coding-task → code-generator
+    - pull-request/code-review → code-reviewer
+    - testing/qa → test-engineer
+    - security/vulnerability/cve → security-scanner
+    - build/ci-cd/pipeline → cicd-engineer
+    - container/image → container-builder
+    - deployment/release/rollout → deployment-manager
+    - documentation/docs → documentation-writer
+    - release/version/changelog → release-manager
+
+    When a work item spans multiple phases, route to the earliest applicable phase.
+    Include routing rationale in every dispatch.
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 5
+    costLimitUSD: 2.0
+    contentFilters:
+      - no-pii
+      - no-secrets-in-output
+    rateLimiting:
+      requestsPerMinute: 120
+  blastRadiusLimit:
+    scope: read-only
+  escalationPolicy:
+    channels:
+      - type: slack
+    triggerConditions:
+      - "classification_confidence < 0.6"
+      - "no_agent_available_for_category"
+  tools:
+    - name: trigger-workflow
+      type: builtin
+    - name: list_issues
+      type: mcp
+    - name: search_issues
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: list_namespaces
+      type: mcp

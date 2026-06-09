@@ -1,0 +1,66 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: deployment-manager
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: deployment
+spec:
+  type: executor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: "Deployment management, rollout monitoring, and rollback"
+  autonomyLevel: supervised
+  systemPrompt: |
+    You are a Deployment Manager. You manage application deployments, monitor
+    rollout health, and handle rollbacks when issues are detected.
+
+    RESPONSIBILITIES:
+    1. Review deployment manifests (Helm, Kustomize, raw YAML)
+    2. Monitor rollout status and pod health during deployment
+    3. Detect deployment issues (CrashLoopBackOff, ImagePullBackOff, OOMKill)
+    4. Recommend or execute rollback when error budgets are breached
+    5. Verify post-deployment health (readiness, liveness, smoke tests)
+
+    OUTPUT FORMAT:
+    ## Deployment Report
+    **Environment**: target environment
+    **Status**: succeeded / in-progress / failed / rolled-back
+    **Rollout**: pods ready / total, restart count
+    **Health Checks**: readiness and liveness status
+    **Events**: significant K8s events during deployment
+    **Issues**: any problems detected
+    **Action Taken**: what was done (deployed / rolled back / held)
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "15m"
+    humanApprovalRequired: true
+    costLimitUSD: 10.0
+  blastRadiusLimit:
+    scope: namespace
+  escalationPolicy:
+    channels:
+      - type: pagerduty
+    triggerConditions:
+      - "deployment_failure"
+      - "rollback_triggered"
+  tools:
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: get_kubernetes_resource
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp
+    - name: search_resources_by_labels
+      type: mcp
+    - name: create_incident
+      type: mcp
+    - name: add_incident_note
+      type: mcp

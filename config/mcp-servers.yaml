@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-servers
+  namespace: ai-agents
+data:
+  servers: |
+    - name: lumino
+      url: http://localhost:8000
+      auth: none
+      icon: "\U0001F537"
+      category: kubernetes
+    - name: github
+      url: http://localhost:9090
+      auth: bearer
+      secretRef: github-mcp-token
+      icon: "\U0001F419"
+      category: code

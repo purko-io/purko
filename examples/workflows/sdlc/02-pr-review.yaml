@@ -1,0 +1,64 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-pr-review
+  namespace: ai-agents
+  annotations:
+    purko.io/template: "true"
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: review
+spec:
+  description: "PR review pipeline: analyze → test → security → verdict → merge or fix"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    repository: ""
+    branch: ""
+    prNumber: ""
+    chainDepth: "0"
+  steps:
+    - name: run-tests
+      agentRef:
+        name: test-engineer
+      input:
+        raw: '{"task": "Review test coverage for changes in PR #${parameters.prNumber} in ${parameters.repository}, branch ${parameters.branch}. Identify untested code paths.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: security-scan
+      agentRef:
+        name: security-scanner
+      input:
+        raw: '{"task": "Scan changes in PR #${parameters.prNumber} in ${parameters.repository} for security vulnerabilities and dependency issues.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: full-review
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [run-tests, security-scan]
+      input:
+        raw: '{"task": "Comprehensive code review for PR #${parameters.prNumber} in ${parameters.repository}. Consider test and security findings. Give a final verdict: approve or request_changes.", "repository": "${parameters.repository}", "pr": "${parameters.prNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: merge-pr
+      agentRef:
+        name: github-agent
+      dependsOn: [full-review]
+      condition: 'steps.full-review.output.verdict == approve'
+      input:
+        raw: '{"task": "PR #${parameters.prNumber} in ${parameters.repository} approved. Merge using squash merge. Use merge_pull_request with the correct owner, repo, and pull number.", "repository": "${parameters.repository}", "pr": "${parameters.prNumber}"}'
+      timeout:
+        timeoutSeconds: 120
+
+    - name: chain-fix
+      agentRef:
+        name: sdlc-router
+      dependsOn: [full-review]
+      condition: 'steps.full-review.output.verdict == request_changes'
+      input:
+        raw: '{"task": "Review requested changes. Trigger fix-review workflow. Use trigger-workflow with workflow=sdlc-fix-review and payload containing repository=${parameters.repository}, branch=${parameters.branch}, prNumber=${parameters.prNumber}, chainDepth=${parameters.chainDepth}."}'
+      timeout:
+        timeoutSeconds: 60

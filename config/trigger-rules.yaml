@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trigger-rules
+  namespace: ai-agents
+data:
+  rules: |
+    [
+      {
+        "name": "pagerduty-critical",
+        "source": "pagerduty",
+        "match": {"severity": "critical"},
+        "workflow": "incident-response"
+      },
+      {
+        "name": "github-pr",
+        "source": "github",
+        "match": {"type": "pull_request"},
+        "workflow": "sdlc-analysis"
+      },
+      {
+        "name": "catch-all",
+        "source": "*",
+        "match": {},
+        "workflow": "_intent"
+      }
+    ]

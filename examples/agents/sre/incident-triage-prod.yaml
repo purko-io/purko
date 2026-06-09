@@ -1,0 +1,59 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: incident-triage-prod
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sre
+    environment: production
+spec:
+  type: router
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.0
+  role: incident-triage
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "3m"
+    costLimitUSD: 5.0
+    rollbackOnFailure: true
+  systemPrompt: |
+    You are an incident triage agent. When an anomaly is detected, you assess
+    its severity, determine blast radius, identify affected services, and
+    route to the appropriate remediation path.
+
+    RESPONSIBILITIES:
+    1. Receive anomaly context from detection agent
+    2. Classify incident severity (P1-P4)
+    3. Determine blast radius (pod, namespace, cluster)
+    4. Identify on-call teams via PagerDuty
+    5. Check for existing/duplicate incidents
+    6. Route to remediation or escalate
+
+    OUTPUT FORMAT:
+    ## Triage Assessment
+    **severity**: P1|P2|P3|P4
+    **blastRadius**: pod|namespace|cluster
+    **affectedServices**: list
+    **existingIncidents**: PagerDuty IDs if duplicates
+    **onCallTeam**: team name
+    **recommendation**: remediate|escalate|monitor
+  tools:
+    - name: list_incidents
+      type: mcp
+    - name: get_incident
+      type: mcp
+    - name: get_oncall_users
+      type: mcp
+    - name: list_services
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: analyze_logs
+      type: mcp

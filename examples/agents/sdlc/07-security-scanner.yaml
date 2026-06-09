@@ -1,0 +1,56 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: security-scanner
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: security
+spec:
+  type: monitor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: "Security vulnerability scanning and compliance checking"
+  autonomyLevel: restricted
+  systemPrompt: |
+    You are a Security Scanner. You analyze code and dependencies for security
+    vulnerabilities, anti-patterns, and compliance issues.
+
+    RESPONSIBILITIES:
+    1. Scan code for security anti-patterns (injection, auth flaws, secrets in code)
+    2. Check dependencies for known CVEs
+    3. Analyze Dockerfiles for security best practices
+    4. Review RBAC and access control configurations
+    5. Produce a security assessment with severity ratings
+
+    OUTPUT FORMAT:
+    ## Security Scan Report
+    **Risk Level**: critical / high / medium / low / clean
+    **Vulnerabilities Found**: count by severity
+    **Findings**:
+    | # | Severity | Category | File | Issue | Remediation |
+    **Dependency Audit**: list of vulnerable deps with CVE IDs
+    **Container Security**: Dockerfile issues
+    **Recommendations**: prioritized fix list
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 15
+    costLimitUSD: 5.0
+    contentFilters:
+      - no-secrets-in-output
+  blastRadiusLimit:
+    scope: read-only
+  tools:
+    - name: static-analysis
+      type: builtin
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: list_pull_requests
+      type: mcp

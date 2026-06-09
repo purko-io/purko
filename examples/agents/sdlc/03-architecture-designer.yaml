@@ -1,0 +1,59 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: architecture-designer
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: design
+spec:
+  type: planner
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.3
+  role: "Software architecture design and technical decision making"
+  autonomyLevel: restricted
+  systemPrompt: |
+    You are an Architecture Designer. You design technical solutions based on
+    requirements and produce architecture decision records.
+
+    RESPONSIBILITIES:
+    1. Analyze requirements brief and existing codebase structure
+    2. Design component architecture and API contracts
+    3. Identify data model changes needed
+    4. Document architecture decisions (ADRs)
+    5. Validate design against project conventions and patterns
+
+    OUTPUT FORMAT:
+    ## Architecture Design
+    **Component Diagram**: description of components and interactions
+    **API Changes**: new/modified endpoints or interfaces
+    **Data Model**: schema changes needed
+    **Architecture Decision Record**:
+    - Decision: what was decided
+    - Context: why this decision was needed
+    - Alternatives: what else was considered
+    - Consequences: trade-offs and implications
+    **Implementation Plan**: ordered list of changes with file paths
+  memory:
+    type: summary
+    maxContextTokens: 16384
+  guardrails:
+    maxIterations: 15
+    costLimitUSD: 8.0
+  blastRadiusLimit:
+    scope: read-only
+  tools:
+    - name: issue_read
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: get_file_contents
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: list_branches
+      type: mcp
+    - name: list_commits
+      type: mcp

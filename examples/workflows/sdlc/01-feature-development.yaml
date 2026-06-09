@@ -1,0 +1,82 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-feature-development
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: development
+spec:
+  description: "Full SDLC feature development: requirements → design → implement → test → review → deploy"
+  parallelism: 2
+  failureStrategy: failFast
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+    featureTicket: "PROJ-001"
+    featureBranch: "feature/PROJ-001"
+    objective: "Describe the feature to implement"
+  steps:
+    - name: analyze-requirements
+      agentRef:
+        name: requirements-analyst
+      input:
+        raw: '{"task": "Analyze the feature request: ${parameters.objective}. Repository: ${parameters.repository}, branch: ${parameters.branch}. Identify acceptance criteria, dependencies, complexity, and risks. Produce a structured requirements brief.", "repository": "${parameters.repository}", "ticket": "${parameters.featureTicket}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: design-solution
+      agentRef:
+        name: architecture-designer
+      dependsOn: [analyze-requirements]
+      condition: 'steps.analyze-requirements.output.feasibility != rejected'
+      input:
+        raw: '{"task": "Design the technical solution for: ${parameters.objective}. Repository: ${parameters.repository}. Use the requirements brief from the previous step. Produce component design, API changes, data model updates, and an implementation plan with file paths.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: implement-feature
+      agentRef:
+        name: code-generator
+      dependsOn: [design-solution]
+      input:
+        raw: '{"task": "Implement the feature in repository ${parameters.repository}. Create branch ${parameters.featureBranch} from ${parameters.branch}. Follow the architecture design from the previous step. Write clean code following project conventions.", "repository": "${parameters.repository}", "branch": "${parameters.branch}", "featureBranch": "${parameters.featureBranch}"}'
+      timeout:
+        timeoutSeconds: 1800
+
+    - name: run-tests
+      agentRef:
+        name: test-engineer
+      dependsOn: [implement-feature]
+      input:
+        raw: '{"task": "Write and execute tests for the feature implemented in ${parameters.repository} on branch ${parameters.featureBranch}. Validate against acceptance criteria. Report coverage on new code.", "repository": "${parameters.repository}", "branch": "${parameters.featureBranch}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: security-scan
+      agentRef:
+        name: security-scanner
+      dependsOn: [implement-feature]
+      input:
+        raw: '{"task": "Scan the code changes in ${parameters.repository} on branch ${parameters.featureBranch} for security vulnerabilities, dependency issues, and anti-patterns.", "repository": "${parameters.repository}", "branch": "${parameters.featureBranch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: code-review
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [run-tests, security-scan]
+      input:
+        raw: '{"task": "Review the code changes in ${parameters.repository} on branch ${parameters.featureBranch}. Consider test results and security scan findings from previous steps. Evaluate for correctness, quality, and adherence to project standards.", "repository": "${parameters.repository}", "branch": "${parameters.featureBranch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: chain-pr-review
+      agentRef:
+        name: sdlc-router
+      dependsOn: [code-review]
+      condition: 'steps.code-review.output.verdict != request_changes'
+      input:
+        raw: '{"task": "Code review passed. Chain to the next SDLC phase by triggering the PR Review pipeline. Use the trigger-workflow tool with workflow=sdlc-pr-review and payload containing repository=${parameters.repository} and branch=${parameters.featureBranch}."}'
+      timeout:
+        timeoutSeconds: 60

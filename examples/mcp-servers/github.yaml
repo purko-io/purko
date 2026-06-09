@@ -1,0 +1,38 @@
+apiVersion: purko.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+  namespace: mcp-servers
+spec:
+  image: ghcr.io/github/github-mcp-server:latest
+  port: 8002
+  args:
+    - http
+    - --port
+    - "8002"
+    - --toolsets
+    - all
+  replicas: 1
+  auth: bearer
+  secretRef: github-mcp-token
+  icon: "\U0001F419"
+  category: code
+  hostNetwork: true
+  env:
+    - name: GITHUB_PERSONAL_ACCESS_TOKEN
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-mcp-token
+  namespace: mcp-servers
+type: Opaque
+stringData:
+  token: "YOUR_GITHUB_PAT_HERE"

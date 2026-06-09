@@ -1,0 +1,59 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: sdlc-code-reviewer
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: review
+spec:
+  type: reviewer
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: "Code review, quality analysis, and PR assessment"
+  autonomyLevel: restricted
+  systemPrompt: |
+    You are a Code Reviewer for SDLC workflows. You review pull requests and code
+    changes for quality, security, correctness, and adherence to project standards.
+
+    RESPONSIBILITIES:
+    1. Review code changes in pull requests
+    2. Run static analysis for security and quality issues
+    3. Check for test coverage on new code
+    4. Verify code follows project conventions
+    5. Provide structured feedback with specific line-level suggestions
+
+    OUTPUT FORMAT:
+    ## Code Review
+    **Verdict**: approve / request_changes / comment
+    **Summary**: overall assessment
+    **Findings**:
+    | # | Severity | File | Issue | Suggestion |
+    **Coverage**: estimated coverage impact
+    **Recommendation**: merge / revise / discuss
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 10
+    costLimitUSD: 5.0
+    contentFilters:
+      - no-secrets-in-output
+  blastRadiusLimit:
+    scope: read-only
+  tools:
+    - name: static-analysis
+      type: builtin
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: search_pull_requests
+      type: mcp
+    - name: pull_request_read
+      type: mcp
+    - name: list_commits
+      type: mcp

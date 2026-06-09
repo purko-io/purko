@@ -1,0 +1,49 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-documentation
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: documentation
+spec:
+  description: "Documentation pipeline: analyze codebase → generate docs → review → publish"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+  steps:
+    - name: analyze-codebase
+      agentRef:
+        name: knowledge-retriever
+      input:
+        raw: '{"task": "Analyze the codebase of ${parameters.repository} on branch ${parameters.branch}. Map the project structure, identify public APIs, key modules, and existing documentation. Build on any previous research from your memory.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: analyze-architecture
+      agentRef:
+        name: architecture-designer
+      input:
+        raw: '{"task": "Analyze the architecture of ${parameters.repository}. Identify key components, dependencies between modules, data flow patterns, and design decisions visible in the code structure.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: generate-docs
+      agentRef:
+        name: documentation-writer
+      dependsOn: [analyze-codebase, analyze-architecture]
+      input:
+        raw: '{"task": "Generate comprehensive documentation for ${parameters.repository} based on the codebase analysis and architecture analysis. Include: project overview, setup guide, API reference, architecture guide, and contribution guidelines.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: review-docs
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [generate-docs]
+      input:
+        raw: '{"task": "Review the generated documentation for ${parameters.repository}. Check for accuracy, completeness, clarity, and proper formatting. Verify that code examples are correct.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 600

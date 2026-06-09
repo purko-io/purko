@@ -1,0 +1,56 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: review-pipeline
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: starter
+spec:
+  description: "Submit content → analyze → review → revise if needed → approve"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    content: ""
+    contentType: "document"
+    reviewCriteria: "accuracy, completeness, clarity"
+  steps:
+    - name: analyze
+      agentRef:
+        name: researcher
+      input:
+        raw: |
+          Analyze the following ${parameters.contentType} and identify key claims, data points, and assertions that need verification.
+          Review criteria: ${parameters.reviewCriteria}
+          Content: ${parameters.content}
+
+    - name: review
+      agentRef:
+        name: reviewer
+      dependsOn: [analyze]
+      input:
+        raw: |
+          Review this ${parameters.contentType} for: ${parameters.reviewCriteria}
+          Analysis context: ${steps.analyze.output.response}
+          Original content: ${parameters.content}
+
+    - name: revise
+      agentRef:
+        name: writer
+      dependsOn: [review]
+      input:
+        raw: |
+          Revise this ${parameters.contentType} based on reviewer feedback.
+          Reviewer feedback: ${steps.review.output.response}
+          Original content: ${parameters.content}
+          Address every issue flagged. Preserve what was marked as strengths.
+
+    - name: final-check
+      agentRef:
+        name: reviewer
+      dependsOn: [revise]
+      input:
+        raw: |
+          Final review of the revised ${parameters.contentType}.
+          Revised content: ${steps.revise.output.response}
+          Original review issues: ${steps.review.output.response}
+          Confirm all issues were addressed.

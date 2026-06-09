@@ -1,0 +1,49 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: code-executor
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: archetypes
+spec:
+  type: executor
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: code-executor
+  runtime:
+    image: localhost/purko-executor:codeact
+    codeExecution:
+      enabled: true
+      languages:
+        - python
+        - bash
+      sandbox:
+        maxExecutionSeconds: 30
+        maxOutputBytes: 100000
+        networkAccess: false
+  guardrails:
+    maxIterations: 50
+    maxExecutionTime: "15m"
+    humanApprovalRequired: true
+    costLimitUSD: 20.0
+  systemPrompt: |
+    You are a code execution agent. Implement the specified task
+    following best practices. Write tests for all new code.
+    You can execute Python and bash code using the execute_code tool.
+    You can also interact with GitHub using the MCP tools.
+  tools:
+    - name: code-sandbox
+      type: function
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: push_files
+      type: mcp
+    - name: create_branch
+      type: mcp
+    - name: list_commits
+      type: mcp

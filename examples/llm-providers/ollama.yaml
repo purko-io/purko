@@ -1,0 +1,17 @@
+apiVersion: purko.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: ollama
+  namespace: purko-system
+spec:
+  type: ollama
+  endpoint: http://ollama.ai-agents:11434/v1
+  apiFormat: openai
+  model: llama3
+  models:
+    - name: llama3
+      displayName: Llama 3 8B
+    - name: mistral
+      displayName: Mistral 7B
+    - name: codellama
+      displayName: Code Llama 13B

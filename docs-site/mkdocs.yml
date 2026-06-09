@@ -1,0 +1,92 @@
+site_name: Purko Documentation
+site_description: "Kubernetes-native platform for building and operating AI agent teams"
+site_url: https://purko-io.github.io/purko/
+repo_url: https://github.com/purko-io/purko
+repo_name: purko-io/purko
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: cyan
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: cyan
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Your First Agent: getting-started/first-agent.md
+    - Your First Workflow: getting-started/first-workflow.md
+    - Connect MCP Servers: getting-started/connect-mcp.md
+  - Concepts:
+    - Agents: concepts/agents.md
+    - Workflows: concepts/workflows.md
+    - MCP Servers: concepts/mcp-servers.md
+    - LLM Providers: concepts/llm-providers.md
+    - "Shu-Ha-Ri: Graduated Autonomy": concepts/shu-ha-ri.md
+    - Tool Types: concepts/tool-types.md
+    - Memory: concepts/memory.md
+  - Guides:
+    - Building Agents: guides/building-agents.md
+    - Building Workflows: guides/building-workflows.md
+    - Industry Templates: guides/industry-templates.md
+    - SDLC Automation: guides/sdlc-workflow.md
+    - Custom Executors: guides/custom-executor.md
+    - Intent Bar: guides/intent-bar.md
+  - Showcases:
+    - Overview: showcases/overview.md
+    - Digital Agency: showcases/digital-agency.md
+    - Legal & Compliance: showcases/legal-compliance.md
+    - Real Estate: showcases/real-estate.md
+    - Data Analytics: showcases/data-analytics.md
+    - Video Production: showcases/video-production.md
+  - Reference:
+    - Agent CRD: reference/crd-agent.md
+    - Workflow CRD: reference/crd-workflow.md
+    - MCPServer CRD: reference/crd-mcpserver.md
+    - LLMProvider CRD: reference/crd-llmprovider.md
+    - AgentAutonomyPolicy CRD: reference/crd-autonomypolicy.md
+    - Executor Protocol: reference/executor-protocol.md
+    - Dashboard API: reference/api-endpoints.md
+    - CLI Reference: reference/cli-reference.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Controllers: architecture/controllers.md
+    - Security: architecture/security.md
+  - Community:
+    - Contributing: community/contributing.md
+    - Roadmap: community/roadmap.md
+    - Changelog: community/changelog.md

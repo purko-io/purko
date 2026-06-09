@@ -1,0 +1,152 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: mcpservers.purko.io
+spec:
+  group: purko.io
+  names:
+    kind: MCPServer
+    listKind: MCPServerList
+    plural: mcpservers
+    singular: mcpserver
+    shortNames:
+    - mcp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Image
+      type: string
+      jsonPath: .spec.image
+      priority: 1
+    - name: Port
+      type: integer
+      jsonPath: .spec.port
+    - name: Category
+      type: string
+      jsonPath: .spec.category
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Tools
+      type: integer
+      jsonPath: .status.toolCount
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - image
+            properties:
+              image:
+                type: string
+                description: Container image for the MCP server.
+              port:
+                type: integer
+                minimum: 1
+                maximum: 65535
+                default: 8000
+              args:
+                type: array
+                description: Container command arguments.
+                items:
+                  type: string
+              replicas:
+                type: integer
+                minimum: 0
+                maximum: 10
+                default: 1
+              auth:
+                type: string
+                description: Authentication type.
+                enum:
+                - none
+                - bearer
+                default: none
+              secretRef:
+                type: string
+                description: Secret name containing auth token.
+              icon:
+                type: string
+                description: Display icon for the dashboard.
+              category:
+                type: string
+                description: Tool category for grouping.
+              hostNetwork:
+                type: boolean
+                description: Use host networking (required for minikube/podman).
+                default: false
+              env:
+                type: array
+                description: Extra environment variables for the container.
+                items:
+                  type: object
+                  required:
+                  - name
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: string
+              resources:
+                type: object
+                properties:
+                  requests:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  limits:
+                    type: object
+                    additionalProperties:
+                      type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum:
+                - Pending
+                - Ready
+                - Error
+              toolCount:
+                type: integer
+              lastDiscovery:
+                type: string
+                format: date-time
+              message:
+                type: string
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - lastTransitionTime
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string

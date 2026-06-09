@@ -1,0 +1,46 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: weekly-capacity-review
+  namespace: ai-agents
+  labels:
+    purko.io/workflow-type: capacity-planning
+spec:
+  description: "Weekly proactive capacity review: analyze capacity + identify toil → compile report"
+  parallelism: 2
+  failureStrategy: continueOnError
+  concurrency:
+    policy: forbid
+  parameters:
+    namespaces: "production,staging"
+    forecastHorizon: "30d"
+  trigger:
+    type: schedule
+    schedule:
+      cron: "0 9 * * 1"
+      suspend: true
+  steps:
+    - name: analyze-capacity
+      agentRef:
+        name: capacity-planning-prod
+      input:
+        raw: '{"task": "Analyze current resource utilization across namespaces: ${parameters.namespaces}. Forecast resource needs for the next ${parameters.forecastHorizon}. Identify over-provisioned and under-provisioned workloads.", "namespaces": "${parameters.namespaces}", "forecastHorizon": "${parameters.forecastHorizon}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: identify-toil
+      agentRef:
+        name: toil-reduction-prod
+      input:
+        raw: '{"task": "Scan namespaces ${parameters.namespaces} for repetitive manual operations and toil. Identify patterns of frequent restarts, manual scaling, and configuration drift. Quantify toil burden.", "namespaces": "${parameters.namespaces}", "scope": "cluster", "minOccurrences": 3}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: compile-report
+      agentRef:
+        name: postmortem-generation-prod
+      dependsOn: [analyze-capacity, identify-toil]
+      input:
+        raw: '{"task": "Compile a weekly capacity and toil report for namespaces ${parameters.namespaces}. Combine the capacity analysis and toil scan results. Include recommendations prioritized by impact.", "namespaces": "${parameters.namespaces}"}'
+      timeout:
+        timeoutSeconds: 600

@@ -1,0 +1,74 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: pagerduty-agent
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: platform
+    purko.io/optional: "true"
+spec:
+  type: executor
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: pagerduty-platform-agent
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "5m"
+    costLimitUSD: 5.0
+    contentFilters:
+      - no-pii
+  systemPrompt: |
+    You are a PagerDuty platform agent. You handle ALL interactions with PagerDuty:
+    incidents, on-call schedules, services, users, and escalations.
+
+    CAPABILITIES:
+    - Create, acknowledge, and resolve incidents
+    - Add notes to incidents
+    - Look up on-call users and schedules
+    - List and inspect services
+    - Search for existing incidents to avoid duplicates
+
+    GUIDELINES:
+    - Always check for existing incidents before creating new ones
+    - Include clear titles and descriptions when creating incidents
+    - Add contextual notes with investigation findings
+    - Identify the on-call team before escalating
+
+    OUTPUT FORMAT:
+    ## PagerDuty Action Report
+    **action**: what was done (created incident, acknowledged, resolved, etc.)
+    **incident**: incident ID and title
+    **onCall**: who is on-call if looked up
+    **details**: relevant context
+  tools:
+    - name: list_incidents
+      type: mcp
+    - name: get_incident
+      type: mcp
+    - name: create_incident
+      type: mcp
+    - name: acknowledge_incident
+      type: mcp
+    - name: resolve_incident
+      type: mcp
+    - name: add_incident_note
+      type: mcp
+    - name: list_services
+      type: mcp
+    - name: get_service
+      type: mcp
+    - name: list_users
+      type: mcp
+    - name: get_user
+      type: mcp
+    - name: list_schedules
+      type: mcp
+    - name: get_schedule
+      type: mcp
+    - name: get_oncall_users
+      type: mcp

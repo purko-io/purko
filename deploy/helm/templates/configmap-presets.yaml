@@ -1,0 +1,12 @@
+{{- if .Values.presets }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: purko-presets
+  namespace: {{ .Values.agentNamespace }}
+  labels:
+    app.kubernetes.io/part-of: purko
+data:
+  presets: |
+    {{- .Values.presets | toJson | nindent 4 }}
+{{- end }}

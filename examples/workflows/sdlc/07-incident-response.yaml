@@ -1,0 +1,62 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-incident-response
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: incident
+spec:
+  description: "SDLC incident response: detect → triage → investigate code + cluster → remediate → postmortem"
+  parallelism: 3
+  failureStrategy: continueOnError
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    namespace: "default"
+    severity: "high"
+  trigger:
+    type: webhook
+  steps:
+    - name: detect-and-triage
+      agentRef:
+        name: sdlc-router
+      input:
+        raw: '{"task": "Triage the incoming incident for namespace ${parameters.namespace}, repository ${parameters.repository}. Classify severity, identify affected components, and determine which investigation tracks are needed.", "namespace": "${parameters.namespace}", "repository": "${parameters.repository}", "severity": "${parameters.severity}"}'
+      timeout:
+        timeoutSeconds: 180
+
+    - name: investigate-cluster
+      agentRef:
+        name: deployment-manager
+      dependsOn: [detect-and-triage]
+      input:
+        raw: '{"task": "Investigate the cluster state for namespace ${parameters.namespace}. Check pod health, recent events, resource utilization, and any deployment issues.", "namespace": "${parameters.namespace}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: investigate-code
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [detect-and-triage]
+      input:
+        raw: '{"task": "Check recent code changes in ${parameters.repository} that may have caused the incident. Review recent PRs, commits, and deployments.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: check-incidents
+      agentRef:
+        name: pagerduty-agent
+      dependsOn: [detect-and-triage]
+      input:
+        raw: '{"task": "Check PagerDuty for existing incidents related to ${parameters.namespace}. List open incidents, check on-call, and identify any duplicate alerts."}'
+      timeout:
+        timeoutSeconds: 300
+
+    - name: compile-report
+      agentRef:
+        name: postmortem-generation-prod
+      dependsOn: [investigate-cluster, investigate-code, check-incidents]
+      input:
+        raw: '{"task": "Compile an incident report from all investigation streams for namespace ${parameters.namespace}, repository ${parameters.repository}. Include: timeline, root cause analysis, impact assessment, remediation steps, and prevention recommendations.", "namespace": "${parameters.namespace}", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 900

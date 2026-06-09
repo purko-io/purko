@@ -1,0 +1,72 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-cicd-pipeline
+  namespace: ai-agents
+  annotations:
+    purko.io/template: "true"
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: cicd
+spec:
+  description: "CI/CD pipeline: build analysis → test → security scan → container check → deploy verification"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+    namespace: "default"
+  steps:
+    - name: analyze-build
+      agentRef:
+        name: cicd-engineer
+      input:
+        raw: '{"task": "Analyze the CI/CD configuration and recent pipeline runs for ${parameters.repository}, branch ${parameters.branch}. Check pipeline health, identify failures, and report status.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: run-tests
+      agentRef:
+        name: test-engineer
+      dependsOn: [analyze-build]
+      input:
+        raw: '{"task": "Execute or analyze test results for ${parameters.repository} on branch ${parameters.branch}. Report pass/fail rates, flaky tests, and coverage.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: security-scan
+      agentRef:
+        name: security-scanner
+      dependsOn: [analyze-build]
+      input:
+        raw: '{"task": "Run security scan on ${parameters.repository}, branch ${parameters.branch}. Check code, dependencies, and any Dockerfiles for vulnerabilities.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: check-container
+      agentRef:
+        name: container-builder
+      dependsOn: [analyze-build]
+      input:
+        raw: '{"task": "Analyze the Dockerfile and container build configuration in ${parameters.repository}. Check for best practices, image size optimization, and security.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: verify-deployment
+      agentRef:
+        name: deployment-manager
+      dependsOn: [run-tests, security-scan, check-container]
+      input:
+        raw: '{"task": "Verify the deployment status in namespace ${parameters.namespace}. Check pod health, recent events, rollout status, and resource utilization.", "namespace": "${parameters.namespace}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: chain-release
+      agentRef:
+        name: sdlc-router
+      dependsOn: [verify-deployment]
+      condition: 'steps.verify-deployment.output.status == succeeded'
+      input:
+        raw: '{"task": "CI/CD pipeline passed and deployment verified. Chain to the Release Pipeline. Use trigger-workflow with workflow=sdlc-release and payload containing repository=${parameters.repository} and branch=${parameters.branch} and namespace=${parameters.namespace}."}'
+      timeout:
+        timeoutSeconds: 60

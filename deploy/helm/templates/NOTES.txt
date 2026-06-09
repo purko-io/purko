@@ -1,0 +1,21 @@
+Purko {{ .Chart.AppVersion }} has been installed.
+
+Namespace:       {{ .Values.namespace }}
+Agent Namespace: {{ .Values.agentNamespace }}
+
+Check operator status:
+  kubectl get pods -n {{ .Values.namespace }}
+{{- if .Values.dashboard.enabled }}
+
+Access the dashboard:
+  kubectl port-forward -n {{ .Values.namespace }} svc/purko-operator {{ .Values.dashboard.port }}:{{ .Values.dashboard.port }}
+  Open http://localhost:{{ .Values.dashboard.port }}
+{{- end }}
+
+Apply CRDs (if not already installed):
+  kubectl apply -f crds/
+
+Deploy example agents:
+  kubectl apply -f examples/agents/sdlc/ -n {{ .Values.agentNamespace }}
+
+Documentation: https://github.com/geored/purko

@@ -1,0 +1,42 @@
+# Go
+bin/
+*.exe
+cover.out
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes / Build
+kubeconfig
+*.kubeconfig
+hack/tools/
+dist/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+gcp-credentials.json
+
+# Project
+purko-operator
+operator
+*.tar
+docs-site/site/

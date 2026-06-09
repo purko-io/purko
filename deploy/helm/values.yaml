@@ -1,0 +1,78 @@
+operator:
+  image: ghcr.io/geored/purko/operator:latest
+  replicas: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  # hostNetwork required for minikube/podman (disable on real clusters)
+  hostNetwork: false
+  dnsPolicy: ClusterFirst
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    fsGroup: 65532
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+executor:
+  image: ghcr.io/geored/purko/executor:latest
+  variants:
+    git: ghcr.io/geored/purko/executor:git
+    dev: ghcr.io/geored/purko/executor:dev
+
+llm:
+  # Provider: vertex-ai | anthropic | openai | "" (auto-detect from env)
+  provider: ""
+  model: claude-sonnet-4-6
+  credentials:
+    # For Vertex AI
+    vertexProjectId: ""
+    vertexRegion: "us-east5"
+    gcpSecretName: "gcp-credentials"
+    # For direct API
+    secretName: ""
+    secretKey: "api-key"
+
+dashboard:
+  enabled: false
+  port: 8082
+
+webhooks:
+  enabled: false
+
+namespace: purko-system
+agentNamespace: ai-agents
+
+# MCP servers registered in the platform
+mcpServers:
+  - name: lumino
+    url: http://localhost:8000
+    auth: none
+    icon: "\U0001F537"
+    category: kubernetes
+  - name: github
+    url: http://localhost:9090
+    auth: bearer
+    secretRef: github-mcp-token
+    icon: "\U0001F419"
+    category: code
+
+# Quick deploy presets (loaded into purko-presets ConfigMap)
+presets: []
+
+# Trigger routing rules
+triggerRules:
+  - name: catch-all
+    source: "*"
+    match: {}
+    workflow: "_intent"

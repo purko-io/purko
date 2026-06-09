@@ -1,0 +1,47 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: system-monitor
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: archetypes
+spec:
+  type: monitor
+  autonomyLevel: restricted
+  replicas: 1
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: system-monitor
+  guardrails:
+    maxIterations: 10
+    maxExecutionTime: "2m"
+    costLimitUSD: 1.0
+  systemPrompt: |
+    You are a monitoring agent. Analyze metrics, logs, and alerts.
+    Identify anomalies and recommend corrective actions.
+
+    RESPONSIBILITIES:
+    1. Query Prometheus for key SLI/SLO metrics
+    2. Check for alerting conditions
+    3. Summarize cluster health status
+    4. Recommend actions if thresholds are breached
+
+    OUTPUT FORMAT:
+    ## System Health Report
+    **status**: healthy|degraded|critical
+    **alerts**: list of active alerts
+    **metrics**: key metrics summary
+    **recommendations**: suggested actions
+  tools:
+    - name: prometheus_query
+      type: mcp
+    - name: detect_anomalies
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp

@@ -1,0 +1,66 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: intake-to-delivery
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: starter
+spec:
+  description: "Receive request → route → research → execute → review → deliver"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    request: ""
+    client: ""
+    deliverableType: "report"
+  steps:
+    - name: intake
+      agentRef:
+        name: router
+      input:
+        raw: |
+          Classify this incoming request and determine what type of work it requires.
+          Client: ${parameters.client}
+          Request: ${parameters.request}
+          Expected deliverable: ${parameters.deliverableType}
+
+    - name: research
+      agentRef:
+        name: researcher
+      dependsOn: [intake]
+      input:
+        raw: |
+          Research the background needed to fulfill this request.
+          Client: ${parameters.client}
+          Request: ${parameters.request}
+          Routing context: ${steps.intake.output.response}
+
+    - name: execute
+      agentRef:
+        name: writer
+      dependsOn: [research]
+      input:
+        raw: |
+          Produce the ${parameters.deliverableType} for ${parameters.client}.
+          Request: ${parameters.request}
+          Research: ${steps.research.output.response}
+
+    - name: review
+      agentRef:
+        name: reviewer
+      dependsOn: [execute]
+      input:
+        raw: |
+          Review this ${parameters.deliverableType} before delivery to ${parameters.client}.
+          Deliverable: ${steps.execute.output.response}
+          Original request: ${parameters.request}
+
+    - name: communicate
+      agentRef:
+        name: communicator
+      dependsOn: [review]
+      input:
+        raw: |
+          Draft a delivery message to ${parameters.client} for this ${parameters.deliverableType}.
+          Deliverable summary: ${steps.execute.output.response}
+          Review result: ${steps.review.output.response}

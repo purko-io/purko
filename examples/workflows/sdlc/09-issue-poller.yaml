@@ -1,0 +1,37 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-issue-poller
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: poller
+spec:
+  description: "Poll GitHub for new issues labeled 'approved-for-dev' and trigger Issue-to-Merge for each"
+  parallelism: 1
+  failureStrategy: continueOnError
+  parameters:
+    repository: "geored/taskctl"
+    label: "approved-for-dev"
+  trigger:
+    type: schedule
+    schedule:
+      cron: "*/30 * * * *"
+      suspend: true
+  steps:
+    - name: find-new-issues
+      agentRef:
+        name: github-agent
+      input:
+        raw: '{"task": "Search for open issues in ${parameters.repository} that have the label \"${parameters.label}\" and do NOT have the label \"purko/in-progress\". Use list_issues to find them. For each issue found, report: issue number, title, and labels. If no issues match, report \"no new issues\".", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 120
+
+    - name: trigger-workflows
+      agentRef:
+        name: sdlc-router
+      dependsOn: [find-new-issues]
+      input:
+        raw: '{"task": "Check the previous step output for issue numbers found in ${parameters.repository} with label ${parameters.label}.\n\nIf issues were found: for each issue number, use the trigger-workflow tool with workflow=sdlc-issue-to-merge and payload={\"repository\": \"${parameters.repository}\", \"branch\": \"main\", \"issueNumber\": \"<number>\"}. Report which workflows were triggered.\n\nIf no issues were found (the previous step said no new issues): just report \"No new issues to process\" and do nothing."}'
+      timeout:
+        timeoutSeconds: 120

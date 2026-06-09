@@ -1,0 +1,15 @@
+{{- if and .Values.operator.pdb.enabled (gt (int .Values.operator.replicas) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: purko-operator
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: purko-operator
+    app.kubernetes.io/part-of: purko
+spec:
+  minAvailable: {{ .Values.operator.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: purko-operator
+{{- end }}

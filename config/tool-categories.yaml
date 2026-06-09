@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tool-categories
+  namespace: ai-agents
+data:
+  categories: |
+    {
+      "Discovery": ["list_namespaces", "list_pods_in_namespace", "get_kubernetes_resource", "search_resources_by_labels", "conservative_namespace_overview"],
+      "Events": ["smart_get_namespace_events", "progressive_event_analysis", "advanced_event_analytics"],
+      "Logs": ["analyze_logs", "detect_log_anomalies", "smart_summarize_pod_logs", "stream_analyze_pod_logs", "analyze_pod_logs_hybrid", "semantic_log_search"],
+      "Analysis": ["detect_anomalies", "check_resource_constraints"],
+      "Metrics": ["prometheus_query"],
+      "Investigation": ["adaptive_namespace_investigation", "automated_triage_rca_report_generator"],
+      "Topology": ["live_system_topology_mapper", "resource_bottleneck_forecaster"],
+      "Prediction": ["predictive_log_analyzer", "what_if_scenario_simulator", "manage_prediction_training_data"],
+      "Security": ["check_cluster_certificate_health", "investigate_tls_certificate_issues"],
+      "etcd": ["get_etcd_logs"],
+      "CI/CD": ["ci_cd_performance_baselining_tool", "analyze_failed_pipeline", "get_pipelinerun_logs", "pipeline_tracer", "find_pipeline", "get_tekton_pipeline_runs_status", "list_pipelineruns", "list_recent_pipeline_runs", "list_taskruns"],
+      "OpenShift": ["get_machine_config_pool_status", "get_openshift_cluster_operator_status"],
+      "Files": ["get_file_contents", "push_files", "create_or_update_file", "delete_file"],
+      "Search": ["search_code", "search_repositories", "search_issues", "search_users", "search_pull_requests"],
+      "Git": ["list_commits", "get_commit", "list_branches", "create_branch", "list_tags", "get_tag"],
+      "Issues": ["list_issues", "add_issue_comment", "issue_read", "issue_write", "list_issue_types", "get_label", "sub_issue_write", "assign_copilot_to_issue"],
+      "Pull Requests": ["list_pull_requests", "create_pull_request", "merge_pull_request", "update_pull_request", "pull_request_read", "pull_request_review_write", "update_pull_request_branch", "add_comment_to_pending_review", "add_reply_to_pull_request_comment", "request_copilot_review"],
+      "Repos": ["fork_repository", "create_repository"],
+      "Releases": ["list_releases", "get_latest_release", "get_release_by_tag"],
+      "User": ["get_me"],
+      "Teams": ["get_team_members", "get_teams"]
+    }

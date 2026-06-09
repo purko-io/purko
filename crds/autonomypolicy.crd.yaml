@@ -1,0 +1,140 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agentautonomypolicies.purko.io
+spec:
+  group: purko.io
+  names:
+    kind: AgentAutonomyPolicy
+    listKind: AgentAutonomyPolicyList
+    plural: agentautonomypolicies
+    singular: agentautonomypolicy
+    shortNames:
+    - aap
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Shu->Ha Actions
+      type: integer
+      jsonPath: .spec.shuHaRi.progressionCriteria.shuToHa.minimumActionsCompleted
+    - name: Ha->Ri Actions
+      type: integer
+      jsonPath: .spec.shuHaRi.progressionCriteria.haToRi.minimumActionsCompleted
+    - name: Rollback
+      type: boolean
+      jsonPath: .spec.rollback.enabled
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - shuHaRi
+            properties:
+              shuHaRi:
+                type: object
+                required:
+                - progressionCriteria
+                properties:
+                  progressionCriteria:
+                    type: object
+                    properties:
+                      shuToHa:
+                        type: object
+                        properties:
+                          minimumActionsCompleted:
+                            type: integer
+                            minimum: 1
+                          minimumSuccessRate:
+                            type: number
+                            minimum: 0
+                            maximum: 1
+                          minimumDaysInLevel:
+                            type: integer
+                            minimum: 0
+                          requiredApprovals:
+                            type: integer
+                            minimum: 0
+                          incidentFreeStreak:
+                            type: integer
+                            minimum: 0
+                      haToRi:
+                        type: object
+                        properties:
+                          minimumActionsCompleted:
+                            type: integer
+                            minimum: 1
+                          minimumSuccessRate:
+                            type: number
+                            minimum: 0
+                            maximum: 1
+                          minimumDaysInLevel:
+                            type: integer
+                            minimum: 0
+                          requiredApprovals:
+                            type: integer
+                            minimum: 0
+                          incidentFreeStreak:
+                            type: integer
+                            minimum: 0
+              rollback:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  triggerConditions:
+                    type: object
+                    properties:
+                      successRateBelow:
+                        type: number
+                        minimum: 0
+                        maximum: 1
+                      consecutiveFailures:
+                        type: integer
+                        minimum: 1
+                  rollbackLevel:
+                    type: string
+                    enum:
+                    - shu
+                    - ha
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                type: integer
+                format: int64
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - lastTransitionTime
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string

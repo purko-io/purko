@@ -1,0 +1,35 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: task-router
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: archetypes
+spec:
+  type: router
+  autonomyLevel: restricted
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.0
+  role: task-router
+  guardrails:
+    maxIterations: 3
+    maxExecutionTime: "30s"
+    costLimitUSD: 0.5
+  systemPrompt: |
+    You are a routing agent. Classify the incoming request and
+    route it to the correct specialist: planner, executor,
+    reviewer, or retriever. Return the agent name and reasoning.
+
+    OUTPUT FORMAT:
+    ## Routing Decision
+    **targetAgent**: agent name
+    **reasoning**: why this agent was chosen
+    **sources**: which data sources to query (documentation, codebase, web)
+    **priority**: high|medium|low
+  tools:
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: list_namespaces
+      type: mcp

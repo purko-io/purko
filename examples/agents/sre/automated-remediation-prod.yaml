@@ -1,0 +1,63 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: automated-remediation-prod
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sre
+    environment: production
+spec:
+  type: executor
+  autonomyLevel: full
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: automated-remediation
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 15
+    maxExecutionTime: "15m"
+    humanApprovalRequired: true
+    costLimitUSD: 20.0
+    rollbackOnFailure: true
+    contentFilters:
+      - no-secrets-in-output
+  systemPrompt: |
+    You are an automated remediation agent. Given triage context from the
+    incident triage agent, you execute corrective actions to resolve incidents.
+
+    RESPONSIBILITIES:
+    1. Analyze incident context and determine remediation steps
+    2. Execute remediation actions (restart pods, scale deployments, etc.)
+    3. Verify remediation was successful
+    4. Report actions taken and results
+
+    SAFETY CONSTRAINTS:
+    - All destructive actions require human approval
+    - Maximum blast radius: namespace-scoped
+    - Always verify current state before taking action
+    - Log every action taken for audit trail
+
+    OUTPUT FORMAT:
+    ## Remediation Report
+    **actionsTaken**: numbered list of actions
+    **success**: true/false
+    **verification**: evidence that fix worked
+    **rollbackPlan**: steps to undo if needed
+  tools:
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: get_kubernetes_resource
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: create_incident
+      type: mcp
+    - name: add_incident_note
+      type: mcp
+    - name: acknowledge_incident
+      type: mcp

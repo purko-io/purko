@@ -1,0 +1,56 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: incident-response-pipeline
+  namespace: ai-agents
+  labels:
+    purko.io/workflow-type: incident-response
+spec:
+  description: "Incident response: detect anomaly → triage → remediate → postmortem"
+  parallelism: 2
+  failureStrategy: continueOnError
+  concurrency:
+    policy: forbid
+  parameters:
+    namespace: "ai-agents"
+    lookback: "30m"
+    sensitivity: "high"
+  trigger:
+    type: webhook
+  steps:
+    - name: detect-anomaly
+      agentRef:
+        name: anomaly-detection-prod
+      input:
+        raw: '{"task": "Analyze namespace ${parameters.namespace} for anomalies over the last ${parameters.lookback}. Check metrics, logs, and events. Report whether an anomaly is detected, its severity, and affected resources.", "namespace": "${parameters.namespace}", "lookback": "${parameters.lookback}", "sensitivity": "${parameters.sensitivity}"}'
+      timeout:
+        timeoutSeconds: 300
+
+    - name: triage-incident
+      agentRef:
+        name: incident-triage-prod
+      dependsOn: [detect-anomaly]
+      condition: 'steps.detect-anomaly.output.anomalyDetected == true'
+      input:
+        raw: '{"task": "Triage the detected anomaly in namespace ${parameters.namespace}. Classify severity, determine blast radius, identify on-call team via PagerDuty, and check for existing incidents.", "namespace": "${parameters.namespace}"}'
+      timeout:
+        timeoutSeconds: 180
+
+    - name: auto-remediate
+      agentRef:
+        name: automated-remediation-prod
+      dependsOn: [triage-incident]
+      condition: 'steps.triage-incident.output.severity in ["critical","high"]'
+      input:
+        raw: '{"task": "Execute remediation for the triaged incident in namespace ${parameters.namespace}. Take corrective actions and verify they resolved the issue.", "namespace": "${parameters.namespace}", "approvalRequired": true}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: generate-postmortem
+      agentRef:
+        name: postmortem-generation-prod
+      dependsOn: [auto-remediate]
+      input:
+        raw: '{"task": "Compile a blameless postmortem from the full incident timeline in namespace ${parameters.namespace}: detection, triage, and remediation. Include root cause, impact, timeline, and action items.", "namespace": "${parameters.namespace}"}'
+      timeout:
+        timeoutSeconds: 600

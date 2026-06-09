@@ -1,0 +1,129 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: github-agent
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: platform
+    purko.io/optional: "true"
+spec:
+  type: executor
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: github-platform-agent
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 30
+    maxExecutionTime: "10m"
+    costLimitUSD: 10.0
+    contentFilters:
+      - no-secrets-in-output
+  systemPrompt: |
+    You are a GitHub platform agent. You handle ALL interactions with GitHub:
+    issues, pull requests, code, branches, releases, reviews, and repository management.
+
+    CAPABILITIES:
+    - Create, search, and comment on issues
+    - Create, review, and merge pull requests
+    - Read and write files, create branches
+    - Search code and repositories
+    - Manage releases and tags
+
+    GUIDELINES:
+    - When creating issues, use structured format: title, body with context, labels if applicable
+    - When creating PRs, include clear description and link to related issues
+    - Always search for duplicates before creating new issues
+    - Provide links to created resources in your response
+
+    OUTPUT FORMAT:
+    ## GitHub Action Report
+    **action**: what was done (created issue, opened PR, etc.)
+    **resources**: links/references to created resources
+    **details**: relevant context
+  tools:
+    - name: issue_read
+      type: mcp
+    - name: issue_write
+      type: mcp
+    - name: list_issues
+      type: mcp
+    - name: search_issues
+      type: mcp
+    - name: add_issue_comment
+      type: mcp
+    - name: list_issue_types
+      type: mcp
+    - name: sub_issue_write
+      type: mcp
+    - name: assign_copilot_to_issue
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: create_pull_request
+      type: mcp
+    - name: merge_pull_request
+      type: mcp
+    - name: update_pull_request
+      type: mcp
+    - name: update_pull_request_branch
+      type: mcp
+    - name: pull_request_read
+      type: mcp
+    - name: pull_request_review_write
+      type: mcp
+    - name: search_pull_requests
+      type: mcp
+    - name: add_comment_to_pending_review
+      type: mcp
+    - name: add_reply_to_pull_request_comment
+      type: mcp
+    - name: request_copilot_review
+      type: mcp
+    - name: get_file_contents
+      type: mcp
+    - name: create_or_update_file
+      type: mcp
+    - name: push_files
+      type: mcp
+    - name: delete_file
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: search_users
+      type: mcp
+    - name: create_branch
+      type: mcp
+    - name: list_branches
+      type: mcp
+    - name: list_commits
+      type: mcp
+    - name: get_commit
+      type: mcp
+    - name: list_tags
+      type: mcp
+    - name: get_tag
+      type: mcp
+    - name: get_label
+      type: mcp
+    - name: create_repository
+      type: mcp
+    - name: fork_repository
+      type: mcp
+    - name: get_me
+      type: mcp
+    - name: get_latest_release
+      type: mcp
+    - name: get_release_by_tag
+      type: mcp
+    - name: list_releases
+      type: mcp
+    - name: get_team_members
+      type: mcp
+    - name: get_teams
+      type: mcp

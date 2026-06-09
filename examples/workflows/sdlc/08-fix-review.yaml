@@ -1,0 +1,45 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-fix-review
+  namespace: ai-agents
+  annotations:
+    purko.io/template: "true"
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: fix-review
+spec:
+  description: "Fix review findings, validate, push, then re-trigger review"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    repository: ""
+    branch: ""
+    prNumber: ""
+    chainDepth: "0"
+  steps:
+    - name: apply-fixes
+      agentRef:
+        name: code-generator
+      input:
+        raw: '{"task": "Read the review comments and findings on the PR in the repository. Fix every issue found by the reviewer on the existing branch. Run tests via execute_code to validate your fixes. Push all fixes as a single commit. Do NOT create a new branch or PR — push to the existing branch.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: validate-fixes
+      agentRef:
+        name: test-engineer
+      dependsOn: [apply-fixes]
+      input:
+        raw: '{"task": "Validate that the fixes on ${parameters.repository} branch ${parameters.branch} are correct. Check that tests pass and no regressions were introduced.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: chain-re-review
+      agentRef:
+        name: sdlc-router
+      dependsOn: [validate-fixes]
+      input:
+        raw: '{"task": "Fixes applied and validated. Trigger a re-review by calling trigger-workflow with workflow=sdlc-pr-review and payload containing repository=${parameters.repository}, branch=${parameters.branch}, prNumber=${parameters.prNumber}, chainDepth=${parameters.chainDepth}."}'
+      timeout:
+        timeoutSeconds: 60

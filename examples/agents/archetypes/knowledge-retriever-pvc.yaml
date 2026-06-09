@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: knowledge-retriever-memory
+  namespace: ai-agents
+  labels:
+    purko.io/agent: knowledge-retriever
+    purko.io/memory-type: vector
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

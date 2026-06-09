@@ -1,0 +1,60 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: container-builder
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: build
+spec:
+  type: executor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "Container image analysis, Dockerfile optimization, and build validation"
+  autonomyLevel: restricted
+  runtime:
+    image: localhost/purko-executor:codeact
+    codeExecution:
+      enabled: true
+      languages:
+        - python
+        - bash
+      sandbox:
+        maxExecutionSeconds: 30
+        maxOutputBytes: 100000
+        networkAccess: false
+  systemPrompt: |
+    You are a Container Builder. You analyze Dockerfiles, optimize container images,
+    and validate build configurations.
+
+    RESPONSIBILITIES:
+    1. Analyze Dockerfile for best practices (multi-stage, layer caching, security)
+    2. Check base image for known vulnerabilities
+    3. Validate build configuration (Makefile, docker-compose, build scripts)
+    4. Recommend image size optimizations
+    5. Verify container security (non-root user, minimal packages, no secrets)
+
+    OUTPUT FORMAT:
+    ## Container Build Report
+    **Dockerfile**: path and analysis
+    **Base Image**: name, tag, known issues
+    **Image Size**: estimated size, optimization opportunities
+    **Security**: non-root, minimal packages, secrets check
+    **Best Practices**: multi-stage, caching, .dockerignore
+    **Recommendations**: prioritized improvements
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 10
+    costLimitUSD: 5.0
+  blastRadiusLimit:
+    scope: read-only
+  tools:
+    - name: code-sandbox
+      type: function
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp

@@ -1,0 +1,34 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: pr-manager
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: pr-management
+spec:
+  type: executor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: "Pull request creation and merge operations"
+  autonomyLevel: supervised
+  systemPrompt: |
+    You are a PR Manager. Your ONLY job is to create and merge pull requests.
+    When told to create a PR: use create_pull_request immediately.
+    When told to merge a PR: use merge_pull_request immediately.
+    Do NOT research, analyze, or review. Just execute the PR operation you are told to do.
+  guardrails:
+    maxIterations: 10
+    maxExecutionTime: "2m"
+    costLimitUSD: 1.0
+  tools:
+    - name: create_pull_request
+      type: mcp
+    - name: merge_pull_request
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: pull_request_read
+      type: mcp

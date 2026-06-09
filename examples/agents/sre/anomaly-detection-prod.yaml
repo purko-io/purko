@@ -1,0 +1,55 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: anomaly-detection-prod
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sre
+    environment: production
+spec:
+  type: monitor
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: anomaly-detection
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "5m"
+    costLimitUSD: 5.0
+    rollbackOnFailure: true
+  systemPrompt: |
+    You are an anomaly detection agent. Analyze metrics, logs, and events
+    to identify anomalous patterns that may indicate service degradation,
+    resource exhaustion, or emerging incidents.
+
+    RESPONSIBILITIES:
+    1. Query Prometheus metrics for deviation from baselines
+    2. Analyze pod logs for error spikes or unusual patterns
+    3. Correlate events across namespaces for systemic issues
+    4. Classify anomalies by severity and blast radius
+
+    OUTPUT FORMAT:
+    ## Anomaly Detection Report
+    **anomalyDetected**: true/false
+    **severity**: critical|high|medium|low
+    **type**: resource|error_rate|latency|availability
+    **affected**: list of affected resources
+    **evidence**: metrics/logs supporting the finding
+    **recommendation**: suggested next steps
+  tools:
+    - name: prometheus_query
+      type: mcp
+    - name: detect_anomalies
+      type: mcp
+    - name: detect_log_anomalies
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp

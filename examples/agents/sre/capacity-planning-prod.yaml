@@ -1,0 +1,65 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: capacity-planning-prod
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sre
+    environment: production
+spec:
+  type: planner
+  autonomyLevel: restricted
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.3
+  role: capacity-planning
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "20m"
+    humanApprovalRequired: true
+    costLimitUSD: 8.0
+    rollbackOnFailure: true
+  systemPrompt: |
+    You are a capacity planning agent. You analyze current resource utilization
+    across the cluster, forecast future needs, and recommend scaling actions.
+
+    RESPONSIBILITIES:
+    1. Analyze CPU, memory, and storage utilization across namespaces
+    2. Identify over-provisioned and under-provisioned workloads
+    3. Forecast resource needs based on current growth trends
+    4. Recommend right-sizing actions with cost impact estimates
+    5. Flag resources approaching limits
+
+    OUTPUT FORMAT:
+    ## Capacity Planning Report
+    **forecastHorizon**: 30 days
+    **namespaces**: list analyzed
+
+    ### Current Utilization
+    | Namespace | CPU Req/Limit | Memory Req/Limit | Status |
+    |-----------|---------------|------------------|--------|
+    | ...       | ...           | ...              | ...    |
+
+    ### Forecasts
+    - Resource that will hit limits within forecast horizon
+
+    ### Recommendations
+    | Action | Resource | Current | Recommended | Cost Impact |
+    |--------|----------|---------|-------------|-------------|
+    | ...    | ...      | ...     | ...         | ...         |
+  tools:
+    - name: list_namespaces
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp
+    - name: resource_bottleneck_forecaster
+      type: mcp
+    - name: prometheus_query
+      type: mcp
+    - name: search_resources_by_labels
+      type: mcp

@@ -1,0 +1,68 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: release-manager
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: release
+spec:
+  type: planner
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "Release planning, changelog generation, and version management"
+  autonomyLevel: supervised
+  systemPrompt: |
+    You are a Release Manager. You manage the release process including version
+    bumping, changelog generation, tagging, and release creation.
+
+    RESPONSIBILITIES:
+    1. Analyze commits since last release to determine version bump (major/minor/patch)
+    2. Generate changelog from commit messages and PR descriptions
+    3. Create release tags and GitHub releases
+    4. Coordinate release announcements
+    5. Track release health post-deployment
+
+    VERSION STRATEGY (Semantic Versioning):
+    - MAJOR: breaking API changes
+    - MINOR: new features, backward compatible
+    - PATCH: bug fixes, no API changes
+
+    OUTPUT FORMAT:
+    ## Release Plan
+    **Current Version**: x.y.z
+    **New Version**: x.y.z (bump type: major/minor/patch)
+    **Changes Since Last Release**: count of commits, PRs merged
+    **Changelog**:
+    ### Features
+    - feature description (PR #N)
+    ### Bug Fixes
+    - fix description (PR #N)
+    ### Breaking Changes
+    - change description (PR #N)
+    **Release Checklist**: pre-release validation items
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 15
+    humanApprovalRequired: true
+    costLimitUSD: 5.0
+  blastRadiusLimit:
+    scope: repository
+  tools:
+    - name: list_commits
+      type: mcp
+    - name: list_tags
+      type: mcp
+    - name: get_latest_release
+      type: mcp
+    - name: list_releases
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: search_pull_requests
+      type: mcp
+    - name: get_file_contents
+      type: mcp

@@ -1,0 +1,62 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-release
+  namespace: ai-agents
+  annotations:
+    purko.io/template: "true"
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: release
+spec:
+  description: "Release pipeline: plan release → run tests → create tag/release → verify deployment"
+  parallelism: 1
+  failureStrategy: failFast
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+    namespace: "default"
+  steps:
+    - name: plan-release
+      agentRef:
+        name: release-manager
+      input:
+        raw: '{"task": "Plan the next release for ${parameters.repository}. Analyze commits since last release, determine version bump (major/minor/patch), and generate changelog.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: validate-tests
+      agentRef:
+        name: test-engineer
+      dependsOn: [plan-release]
+      input:
+        raw: '{"task": "Validate that all tests pass on ${parameters.repository} branch ${parameters.branch} before release. Run comprehensive test suite and report results.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 900
+
+    - name: security-check
+      agentRef:
+        name: security-scanner
+      dependsOn: [plan-release]
+      input:
+        raw: '{"task": "Final security scan on ${parameters.repository} branch ${parameters.branch} before release. Check for any critical or high severity vulnerabilities that would block the release.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: create-release
+      agentRef:
+        name: github-agent
+      dependsOn: [validate-tests, security-check]
+      input:
+        raw: '{"task": "Create the release for ${parameters.repository}. Use the version and changelog from the plan-release step. Create a git tag and GitHub release with the changelog as release notes.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: verify-post-release
+      agentRef:
+        name: deployment-manager
+      dependsOn: [create-release]
+      input:
+        raw: '{"task": "Verify post-release health for the application deployed in namespace ${parameters.namespace}. Check pod status, recent events, and ensure no regressions after the release.", "namespace": "${parameters.namespace}"}'
+      timeout:
+        timeoutSeconds: 600

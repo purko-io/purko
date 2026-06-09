@@ -1,0 +1,11 @@
+{{- $agentCRD := (.Files.Get "../../crds/agent.crd.yaml") -}}
+{{- $workflowCRD := (.Files.Get "../../crds/workflow.crd.yaml") -}}
+{{- if $agentCRD }}
+{{ $agentCRD }}
+---
+{{ $workflowCRD }}
+{{- else }}
+# CRDs should be installed separately: kubectl apply -f crds/
+# helm install does not manage CRD lifecycle well for upgrades.
+# Install with: kubectl apply -f crds/agent.crd.yaml -f crds/workflow.crd.yaml
+{{- end }}

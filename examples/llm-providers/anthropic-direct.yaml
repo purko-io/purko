@@ -1,0 +1,37 @@
+apiVersion: purko.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: anthropic
+  namespace: purko-system
+spec:
+  type: anthropic
+  apiFormat: anthropic
+  model: claude-sonnet-4-6
+  models:
+    - name: claude-sonnet-4-6
+      displayName: Claude Sonnet 4.6
+      pricing:
+        inputPerMToken: 3
+        outputPerMToken: 15
+    - name: claude-opus-4-6
+      displayName: Claude Opus 4.6
+      pricing:
+        inputPerMToken: 15
+        outputPerMToken: 75
+    - name: claude-haiku-4-5
+      displayName: Claude Haiku 4.5
+      pricing:
+        inputPerMToken: 0.8
+        outputPerMToken: 4
+  credentials:
+    secretRef: anthropic-key
+    secretKey: api-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: anthropic-key
+  namespace: purko-system
+type: Opaque
+stringData:
+  api-key: "sk-ant-YOUR-KEY-HERE"

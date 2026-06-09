@@ -1,0 +1,616 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agents.purko.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: purko.io
+  names:
+    kind: Agent
+    listKind: AgentList
+    plural: agents
+    singular: agent
+    shortNames:
+    - ag
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      jsonPath: .spec.type
+    - name: Model
+      type: string
+      jsonPath: .spec.model.name
+    - name: Status
+      type: string
+      jsonPath: .status.phase
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: Agent represents an autonomous AI agent that can be deployed
+          and managed within a Kubernetes cluster.
+        properties:
+          apiVersion:
+            type: string
+            description: APIVersion defines the versioned schema of this representation
+              of an object.
+          kind:
+            type: string
+            description: Kind is a string value representing the REST resource this
+              object represents.
+          spec:
+            type: object
+            description: AgentSpec defines the desired state of an Agent.
+            required:
+            - model
+            properties:
+              model:
+                type: object
+                description: Model configuration for the AI model used by this agent.
+                properties:
+                  provider:
+                    type: string
+                    description: The AI model provider (e.g., openai, anthropic, meta).
+                  name:
+                    type: string
+                    description: The model name (e.g., gpt-4, claude-3, llama-3).
+                  version:
+                    type: string
+                    description: The model version or variant.
+                  temperature:
+                    type: number
+                    description: Sampling temperature for model inference.
+                    minimum: 0
+                    maximum: 2
+                  maxTokens:
+                    type: integer
+                    description: Maximum number of tokens to generate.
+                    minimum: 1
+                  topP:
+                    type: number
+                    description: Top-p (nucleus) sampling parameter.
+                    minimum: 0
+                    maximum: 1
+                  credentialsSecretRef:
+                    type: object
+                    description: Reference to a Secret containing model provider credentials.
+                    properties:
+                      name:
+                        type: string
+                        description: Name of the Secret.
+                      namespace:
+                        type: string
+                        description: Namespace of the Secret.
+                    x-kubernetes-preserve-unknown-fields: true
+                  fallback:
+                    type: object
+                    description: Fallback model configuration if the primary model
+                      is unavailable.
+                    properties:
+                      model:
+                        type: string
+                        description: Fallback model name.
+                      provider:
+                        type: string
+                        description: Fallback model provider.
+                    x-kubernetes-preserve-unknown-fields: true
+                  frequencyPenalty:
+                    type: number
+                    description: Frequency penalty to reduce repetition.
+                    minimum: -2
+                    maximum: 2
+                  presencePenalty:
+                    type: number
+                    description: Presence penalty to encourage topic diversity.
+                    minimum: -2
+                    maximum: 2
+                required:
+                - name
+                - provider
+                x-kubernetes-preserve-unknown-fields: true
+              type:
+                type: string
+                description: Agent archetype that determines behavior profile.
+                enum:
+                  - planner
+                  - executor
+                  - reviewer
+                  - router
+                  - monitor
+                  - retriever
+              role:
+                type: string
+                description: The role or persona of the agent.
+                minLength: 1
+              systemPrompt:
+                type: string
+                description: System-level prompt that defines agent behavior.
+              instructions:
+                type: string
+                description: Detailed instructions for the agent.
+              tools:
+                type: array
+                description: List of tools the agent can use.
+                items:
+                  type: object
+                  description: Tool defines an external tool or function available
+                    to the agent.
+                  required:
+                  - name
+                  - type
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the tool.
+                    type:
+                      type: string
+                      description: Type of the tool.
+                      enum:
+                      - function
+                      - api
+                      - mcp
+                      - builtin
+                      - kubernetes
+                      - workflow
+                      - cli
+                    endpoint:
+                      type: object
+                      description: Endpoint configuration for API-based tools.
+                      properties:
+                        url:
+                          type: string
+                          description: URL of the tool endpoint.
+                        method:
+                          type: string
+                          description: HTTP method for the endpoint.
+                          enum:
+                          - GET
+                          - POST
+                          - PUT
+                          - DELETE
+                          - PATCH
+                        headers:
+                          type: object
+                          description: HTTP headers to include in requests.
+                          additionalProperties:
+                            type: string
+                            description: Header value.
+                          x-kubernetes-preserve-unknown-fields: true
+                        timeoutSeconds:
+                          type: integer
+                          description: Timeout in seconds for endpoint requests.
+                          minimum: 1
+                      x-kubernetes-preserve-unknown-fields: true
+                    config:
+                      type: object
+                      description: Additional tool-specific configuration.
+                      x-kubernetes-preserve-unknown-fields: true
+                  x-kubernetes-preserve-unknown-fields: true
+              memory:
+                type: object
+                description: Memory configuration for the agent.
+                properties:
+                  backend:
+                    type: string
+                    description: Storage backend for agent memory (e.g., redis, postgres,
+                      in-memory).
+                  ttl:
+                    type: string
+                    description: Time-to-live for memory entries (e.g., 1h, 24h, 7d).
+                  maxEntries:
+                    type: integer
+                    description: Maximum number of memory entries to retain.
+                    minimum: 0
+                  vectorStore:
+                    type: object
+                    description: Vector store configuration for semantic memory.
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Whether vector store is enabled.
+                      provider:
+                        type: string
+                        description: Vector store provider (e.g., pinecone, weaviate,
+                          pgvector).
+                      dimensions:
+                        type: integer
+                        description: Embedding vector dimensions.
+                        minimum: 1
+                      indexName:
+                        type: string
+                        description: Name of the vector index.
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              guardrails:
+                type: object
+                description: Safety guardrails and content filtering configuration.
+                properties:
+                  inputFilters:
+                    type: array
+                    description: Filters applied to input before processing.
+                    items:
+                      type: string
+                      description: Input filter name or pattern.
+                      x-kubernetes-preserve-unknown-fields: true
+                  outputFilters:
+                    type: array
+                    description: Filters applied to output before returning.
+                    items:
+                      type: string
+                      description: Output filter name or pattern.
+                      x-kubernetes-preserve-unknown-fields: true
+                  contentPolicy:
+                    type: string
+                    description: Content moderation policy to enforce.
+                  maxTokensPerRequest:
+                    type: integer
+                    description: Maximum tokens allowed per single request.
+                    minimum: 1
+                  rateLimiting:
+                    type: object
+                    description: Rate limiting configuration for agent requests.
+                    properties:
+                      requestsPerMinute:
+                        type: integer
+                        description: Maximum requests per minute.
+                        minimum: 1
+                      tokensPerMinute:
+                        type: integer
+                        description: Maximum tokens per minute.
+                        minimum: 1
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              observability:
+                type: object
+                description: Observability configuration for monitoring and debugging.
+                properties:
+                  metrics:
+                    type: object
+                    description: Metrics collection configuration.
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Whether metrics collection is enabled.
+                      port:
+                        type: integer
+                        description: Port to expose metrics on.
+                      path:
+                        type: string
+                        description: HTTP path for metrics endpoint.
+                    x-kubernetes-preserve-unknown-fields: true
+                  logging:
+                    type: object
+                    description: Logging configuration.
+                    properties:
+                      level:
+                        type: string
+                        description: Log level.
+                        enum:
+                        - debug
+                        - info
+                        - warn
+                        - error
+                      format:
+                        type: string
+                        description: Log output format.
+                        enum:
+                        - json
+                        - text
+                    x-kubernetes-preserve-unknown-fields: true
+                  tracing:
+                    type: object
+                    description: Distributed tracing configuration.
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Whether tracing is enabled.
+                      endpoint:
+                        type: string
+                        description: Tracing collector endpoint.
+                      samplingRate:
+                        type: number
+                        description: Trace sampling rate.
+                        minimum: 0
+                        maximum: 1
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              runtime:
+                type: object
+                description: Runtime configuration for the agent container.
+                properties:
+                  image:
+                    type: string
+                    description: Container image for the agent runtime.
+                  resources:
+                    type: object
+                    description: Compute resource requirements.
+                    properties:
+                      limits:
+                        type: object
+                        description: Resource limits.
+                        properties:
+                          cpu:
+                            type: string
+                            description: CPU limit.
+                          memory:
+                            type: string
+                            description: Memory limit.
+                          gpu:
+                            type: string
+                            description: GPU limit.
+                        x-kubernetes-preserve-unknown-fields: true
+                      requests:
+                        type: object
+                        description: Resource requests.
+                        properties:
+                          cpu:
+                            type: string
+                            description: CPU request.
+                          memory:
+                            type: string
+                            description: Memory request.
+                        x-kubernetes-preserve-unknown-fields: true
+                    x-kubernetes-preserve-unknown-fields: true
+                  env:
+                    type: array
+                    description: Environment variables for the agent container.
+                    items:
+                      type: object
+                      description: An environment variable key-value pair.
+                      properties:
+                        name:
+                          type: string
+                          description: Environment variable name.
+                        value:
+                          type: string
+                          description: Environment variable value.
+                      x-kubernetes-preserve-unknown-fields: true
+                  serviceAccountName:
+                    type: string
+                    description: ServiceAccount to use for the agent pod.
+                x-kubernetes-preserve-unknown-fields: true
+              scaling:
+                type: object
+                description: Autoscaling configuration for the agent.
+                properties:
+                  minReplicas:
+                    type: integer
+                    description: Minimum number of agent replicas.
+                    minimum: 0
+                  maxReplicas:
+                    type: integer
+                    description: Maximum number of agent replicas.
+                    minimum: 1
+                  targetUtilization:
+                    type: integer
+                    description: Target CPU utilization percentage for autoscaling.
+                    minimum: 1
+                    maximum: 100
+                x-kubernetes-preserve-unknown-fields: true
+              lifecycle:
+                type: object
+                description: Lifecycle hooks for the agent.
+                properties:
+                  preStart:
+                    type: object
+                    description: Hook executed before the agent starts.
+                    properties:
+                      command:
+                        type: array
+                        description: Command to execute.
+                        items:
+                          type: string
+                          description: Command argument.
+                          x-kubernetes-preserve-unknown-fields: true
+                      webhook:
+                        type: string
+                        description: Webhook URL to invoke.
+                    x-kubernetes-preserve-unknown-fields: true
+                  postStop:
+                    type: object
+                    description: Hook executed after the agent stops.
+                    properties:
+                      command:
+                        type: array
+                        description: Command to execute.
+                        items:
+                          type: string
+                          description: Command argument.
+                          x-kubernetes-preserve-unknown-fields: true
+                      webhook:
+                        type: string
+                        description: Webhook URL to invoke.
+                    x-kubernetes-preserve-unknown-fields: true
+                  healthCheck:
+                    type: object
+                    description: Health check configuration.
+                    properties:
+                      path:
+                        type: string
+                        description: HTTP path for health checks.
+                      port:
+                        type: integer
+                        description: Port for health checks.
+                      intervalSeconds:
+                        type: integer
+                        description: Interval between health checks in seconds.
+                        minimum: 1
+                    x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              capabilities:
+                type: array
+                description: Agent capabilities
+                x-kubernetes-preserve-unknown-fields: true
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              autonomyLevel:
+                type: string
+                description: Level of autonomous decision-making allowed for the agent.
+                enum:
+                - full
+                - supervised
+                - restricted
+                - manual
+              confidenceThreshold:
+                type: number
+                description: Minimum confidence score required before the agent takes
+                  autonomous action.
+                minimum: 0
+                maximum: 1
+              blastRadiusLimit:
+                type: object
+                description: Limits on the scope of changes an agent can make.
+                properties:
+                  maxAffectedResources:
+                    type: integer
+                    description: Maximum number of resources the agent can affect
+                      in a single action.
+                    minimum: 1
+                  allowedNamespaces:
+                    type: array
+                    description: Namespaces the agent is allowed to operate in.
+                    items:
+                      type: string
+                      description: An allowed namespace name.
+                      x-kubernetes-preserve-unknown-fields: true
+                  deniedActions:
+                    type: array
+                    description: Actions the agent is explicitly denied from performing.
+                    items:
+                      type: string
+                      description: A denied action identifier.
+                      x-kubernetes-preserve-unknown-fields: true
+                x-kubernetes-preserve-unknown-fields: true
+              escalationPolicy:
+                type: object
+                description: Policy for escalating decisions that exceed the agent
+                  autonomy level.
+                properties:
+                  escalateTo:
+                    type: string
+                    description: Target for escalation (e.g., a user, group, or another
+                      agent).
+                  timeout:
+                    type: string
+                    description: Timeout before auto-escalation (e.g., 5m, 1h).
+                  notificationChannel:
+                    type: string
+                    description: Channel for escalation notifications (e.g., slack,
+                      email, pagerduty).
+                x-kubernetes-preserve-unknown-fields: true
+              schedule:
+                type: object
+                description: Schedule configuration for periodic agent activation.
+                properties:
+                  cron:
+                    type: string
+                    description: Cron expression for scheduled activation.
+                  timezone:
+                    type: string
+                    description: Timezone for the cron schedule (e.g., UTC, America/New_York).
+                  suspend:
+                    type: boolean
+                    description: Whether the schedule is suspended.
+                x-kubernetes-preserve-unknown-fields: true
+              replicas:
+                type: integer
+                description: Number of agent replicas to run.
+                minimum: 0
+                maximum: 100
+                default: 1
+              maxConcurrency:
+                type: integer
+                description: Maximum concurrent tasks the agent can process.
+                minimum: 1
+                default: 10
+              timeout:
+                type: string
+                description: Default timeout duration for agent operations (e.g.,
+                  30s, 5m, 1h).
+                default: 5m
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            description: AgentStatus defines the observed state of an Agent.
+            properties:
+              phase:
+                type: string
+                description: Current phase of the agent lifecycle.
+                enum:
+                - Pending
+                - Initializing
+                - Ready
+                - Running
+                - Error
+                - Terminated
+              conditions:
+                type: array
+                description: Conditions represent the latest observations of the agent
+                  state.
+                items:
+                  type: object
+                  description: A condition describing an aspect of the agent state.
+                  properties:
+                    type:
+                      type: string
+                      description: Type of condition.
+                    status:
+                      type: string
+                      description: Status of the condition.
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                    lastTransitionTime:
+                      type: string
+                      description: Last time the condition transitioned.
+                      format: date-time
+                    reason:
+                      type: string
+                      description: Machine-readable reason for the condition.
+                    message:
+                      type: string
+                      description: Human-readable message for the condition.
+                  x-kubernetes-preserve-unknown-fields: true
+              message:
+                type: string
+                description: Human-readable message describing the current status.
+              observedGeneration:
+                type: integer
+                description: Most recent generation observed by the controller.
+                format: int64
+              startTime:
+                type: string
+                description: Time when the agent was started.
+                format: date-time
+              completionTime:
+                type: string
+                description: Time when the agent completed or was terminated.
+                format: date-time
+              availableReplicas:
+                type: integer
+                description: Number of replicas currently available.
+              lastActiveTime:
+                type: string
+                description: Last time the agent processed a task.
+                format: date-time
+              totalTasksProcessed:
+                type: integer
+                description: Total number of tasks processed by the agent.
+                format: int64
+              errorCount:
+                type: integer
+                description: Total number of errors encountered.
+                format: int64
+            x-kubernetes-preserve-unknown-fields: true
+        x-kubernetes-preserve-unknown-fields: true

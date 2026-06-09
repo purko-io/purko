@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: purko-operator
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: purko-operator
+    app.kubernetes.io/part-of: purko
+spec:
+  replicas: {{ .Values.operator.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: purko-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: purko-operator
+        app.kubernetes.io/part-of: purko
+    spec:
+      serviceAccountName: purko-operator
+      {{- if .Values.operator.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: Default
+      {{- else }}
+      dnsPolicy: {{ .Values.operator.dnsPolicy }}
+      {{- end }}
+      {{- with .Values.operator.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: operator
+          image: {{ .Values.operator.image }}
+          {{- with .Values.operator.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          args:
+            - --agent-namespace={{ .Values.agentNamespace }}
+            - --dashboard-port={{ .Values.dashboard.port }}
+            {{- if .Values.llm.provider }}
+            - --llm-provider={{ .Values.llm.provider }}
+            {{- end }}
+            - --llm-model={{ .Values.llm.model }}
+            {{- if .Values.webhooks.enabled }}
+            - --enable-webhooks=true
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.dashboard.port }}
+              name: dashboard
+            - containerPort: 8080
+              name: metrics
+            - containerPort: 8081
+              name: health
+          env:
+            {{- if .Values.llm.credentials.vertexProjectId }}
+            - name: ANTHROPIC_VERTEX_PROJECT_ID
+              value: {{ .Values.llm.credentials.vertexProjectId | quote }}
+            - name: CLOUD_ML_REGION
+              value: {{ .Values.llm.credentials.vertexRegion | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/run/secrets/gcp/credentials.json
+            {{- end }}
+            {{- if .Values.llm.credentials.secretName }}
+            - name: MODEL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.credentials.secretName }}
+                  key: {{ .Values.llm.credentials.secretKey }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.operator.resources | nindent 12 }}
+          {{- if .Values.llm.credentials.vertexProjectId }}
+          volumeMounts:
+            - name: gcp-creds
+              mountPath: /var/run/secrets/gcp
+              readOnly: true
+          {{- end }}
+      {{- if .Values.llm.credentials.vertexProjectId }}
+      volumes:
+        - name: gcp-creds
+          secret:
+            secretName: {{ .Values.llm.credentials.gcpSecretName }}
+            optional: true
+      {{- end }}

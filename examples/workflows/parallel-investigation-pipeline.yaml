@@ -1,0 +1,67 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: parallel-research-pipeline
+  namespace: ai-agents
+spec:
+  description: "Parallel research with multiple retrievers and synthesis."
+  parallelism: 3
+  failureStrategy: continueOnError
+  parameters:
+    researchQuestion: "Describe your research question"
+    repository: "CHANGE_ME/repo-name"
+  steps:
+    - name: route
+      agentRef:
+        name: task-router
+      input:
+        raw: '{"task": "Classify this research request and determine which sources to query (documentation, codebase, web).", "question": "${parameters.researchQuestion}", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 30
+
+    - name: search-docs
+      agentRef:
+        name: knowledge-retriever
+      dependsOn: [route]
+      condition: 'steps.route.output.sources contains documentation'
+      input:
+        raw: '{"task": "Search documentation and knowledge bases for information about: ${parameters.researchQuestion}. Focus on repository ${parameters.repository} docs if relevant.", "source": "documentation", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 300
+
+    - name: search-code
+      agentRef:
+        name: knowledge-retriever
+      dependsOn: [route]
+      condition: 'steps.route.output.sources contains codebase'
+      input:
+        raw: '{"task": "Search repository ${parameters.repository} for implementations and examples related to: ${parameters.researchQuestion}", "source": "codebase", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 300
+
+    - name: search-web
+      agentRef:
+        name: knowledge-retriever
+      dependsOn: [route]
+      input:
+        raw: '{"task": "Search for general information and best practices about: ${parameters.researchQuestion}", "source": "web"}'
+      timeout:
+        timeoutSeconds: 300
+
+    - name: synthesize
+      agentRef:
+        name: project-planner
+      dependsOn: [search-docs, search-code, search-web]
+      input:
+        raw: '{"task": "Synthesize research findings from documentation, code, and web searches into a comprehensive report with actionable recommendations for ${parameters.repository}.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: quality-check
+      agentRef:
+        name: code-reviewer
+      dependsOn: [synthesize]
+      input:
+        raw: '{"task": "Review the synthesized research report for accuracy, completeness, and quality of recommendations.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 300

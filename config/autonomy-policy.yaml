@@ -1,0 +1,25 @@
+apiVersion: purko.io/v1alpha1
+kind: AgentAutonomyPolicy
+metadata:
+  name: default
+  namespace: ai-agents
+spec:
+  shuHaRi:
+    progressionCriteria:
+      shuToHa:
+        minimumActionsCompleted: 100
+        minimumSuccessRate: 0.95
+        minimumDaysInLevel: 14
+        requiredApprovals: 0
+      haToRi:
+        minimumActionsCompleted: 500
+        minimumSuccessRate: 0.99
+        minimumDaysInLevel: 30
+        requiredApprovals: 0
+        incidentFreeStreak: 20
+  rollback:
+    enabled: true
+    triggerConditions:
+      successRateBelow: 0.90
+      consecutiveFailures: 3
+    rollbackLevel: shu

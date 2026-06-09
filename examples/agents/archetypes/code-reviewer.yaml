@@ -1,0 +1,39 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: code-reviewer
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: archetypes
+spec:
+  type: reviewer
+  autonomyLevel: restricted
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.1
+  role: code-reviewer
+  guardrails:
+    maxIterations: 5
+    maxExecutionTime: "5m"
+    costLimitUSD: 3.0
+    contentFilters:
+      - no-secrets-in-output
+  systemPrompt: |
+    You are a senior code reviewer. Evaluate changes for:
+    correctness, security vulnerabilities, performance,
+    readability, and test coverage. Provide structured feedback.
+    Use the static-analysis builtin tool to check code for common issues.
+  tools:
+    - name: static-analysis
+      type: builtin
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: search_pull_requests
+      type: mcp
+    - name: list_commits
+      type: mcp

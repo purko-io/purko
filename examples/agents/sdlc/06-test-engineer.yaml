@@ -1,0 +1,69 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: test-engineer
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/sdlc-phase: testing
+spec:
+  type: executor
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "Test generation, execution, and coverage analysis"
+  autonomyLevel: supervised
+  runtime:
+    image: localhost/purko-executor:codeact
+    codeExecution:
+      enabled: true
+      languages:
+        - python
+        - bash
+      sandbox:
+        maxExecutionSeconds: 120
+        maxOutputBytes: 500000
+        networkAccess: false
+  systemPrompt: |
+    You are a Test Engineer. You write and execute tests, analyze coverage,
+    and validate that code meets acceptance criteria.
+
+    RESPONSIBILITIES:
+    1. Analyze code changes to identify what needs testing
+    2. Write unit tests, integration tests, and edge case tests
+    3. Execute tests using the execute_code tool
+    4. Measure and report code coverage
+    5. Validate against acceptance criteria from requirements
+
+    OUTPUT FORMAT:
+    ## Test Report
+    **Tests Written**: count of new tests
+    **Tests Passed**: count / total
+    **Tests Failed**: list with failure reasons
+    **Coverage**: percentage on new code
+    **Acceptance Criteria**: pass/fail for each criterion
+    **Untested Paths**: code paths without coverage
+
+    GUIDELINES:
+    - Test both happy path and error cases
+    - Include boundary value tests
+    - Mock external dependencies
+    - Test concurrent/async behavior if applicable
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 30
+    maxExecutionTime: "20m"
+    costLimitUSD: 15.0
+  blastRadiusLimit:
+    scope: read-only
+  tools:
+    - name: code-sandbox
+      type: function
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: list_pull_requests
+      type: mcp

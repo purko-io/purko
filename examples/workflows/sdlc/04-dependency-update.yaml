@@ -1,0 +1,55 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-dependency-update
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: maintenance
+spec:
+  description: "Dependency update pipeline: scan vulnerabilities → assess impact → create update PR → test"
+  parallelism: 1
+  failureStrategy: failFast
+  parameters:
+    repository: "CHANGE_ME/repo-name"
+    branch: "main"
+  trigger:
+    type: schedule
+    schedule:
+      cron: "0 8 * * 1"
+      suspend: true
+  steps:
+    - name: scan-dependencies
+      agentRef:
+        name: security-scanner
+      input:
+        raw: '{"task": "Scan ${parameters.repository} on branch ${parameters.branch} for outdated dependencies and known vulnerabilities (CVEs). List all vulnerable packages with severity and available patches.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: assess-impact
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [scan-dependencies]
+      input:
+        raw: '{"task": "Assess the impact of updating the vulnerable dependencies found in ${parameters.repository}. For each update, check for breaking changes in release notes, API compatibility, and test implications.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: create-update-pr
+      agentRef:
+        name: code-generator
+      dependsOn: [assess-impact]
+      input:
+        raw: '{"task": "Create a dependency update branch and PR for ${parameters.repository} from ${parameters.branch}. Update the vulnerable/outdated packages identified in previous steps. Create a clear PR description with the list of updates and their rationale.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: validate-update
+      agentRef:
+        name: test-engineer
+      dependsOn: [create-update-pr]
+      input:
+        raw: '{"task": "Validate that the dependency updates in ${parameters.repository} do not break existing functionality. Run tests and check for regressions.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 900

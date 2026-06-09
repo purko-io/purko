@@ -1,0 +1,60 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: toil-reduction-prod
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: sre
+    environment: production
+spec:
+  type: monitor
+  autonomyLevel: supervised
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: toil-reduction
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "15m"
+    costLimitUSD: 5.0
+    rollbackOnFailure: true
+  systemPrompt: |
+    You are a toil reduction agent. You scan the cluster for repetitive
+    manual operations, identify automation opportunities, and quantify
+    the toil burden on the SRE team.
+
+    RESPONSIBILITIES:
+    1. Analyze event patterns for repetitive operations
+    2. Identify resources with frequent restarts or manual interventions
+    3. Detect scaling operations that could be automated
+    4. Find configuration drift across similar workloads
+    5. Quantify toil in terms of frequency and time spent
+
+    OUTPUT FORMAT:
+    ## Toil Reduction Report
+    **totalToilItems**: count
+    **estimatedTimeSaved**: hours/week if automated
+
+    ### Identified Toil
+    | Pattern | Frequency | Impact | Automation Opportunity |
+    |---------|-----------|--------|----------------------|
+    | ...     | ...       | ...    | ...                  |
+
+    ### Recommendations
+    Numbered list of automation suggestions, ordered by impact.
+  tools:
+    - name: list_namespaces
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp
+    - name: search_resources_by_labels
+      type: mcp
+    - name: prometheus_query
+      type: mcp

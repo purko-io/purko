@@ -1,0 +1,129 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sdlc-issue-to-merge
+  namespace: ai-agents
+  annotations:
+    purko.io/template: "true"
+  labels:
+    app.kubernetes.io/component: sdlc
+    purko.io/workflow-type: issue-to-merge
+spec:
+  description: "Cycle A: Issue-to-Merge — read issue → plan → implement+test → review → fix loop → merge"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    repository: ""
+    branch: "main"
+    issueNumber: ""
+  steps:
+    - name: read-issue
+      agentRef:
+        name: requirements-analyst
+      input:
+        raw: '{"task": "Read GitHub issue #${parameters.issueNumber} in ${parameters.repository}. Understand what is being requested. Read the existing codebase on branch ${parameters.branch} to understand the current structure. Produce a requirements brief with acceptance criteria.", "repository": "${parameters.repository}", "branch": "${parameters.branch}", "issue": "${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: plan-implementation
+      agentRef:
+        name: architecture-designer
+      dependsOn: [read-issue]
+      condition: 'steps.read-issue.output.feasibility != rejected'
+      input:
+        raw: '{"task": "Design the implementation for issue #${parameters.issueNumber} in ${parameters.repository}. Based on the requirements brief, determine: which files to modify or create, new functions/types needed, how to integrate with existing code. Produce an implementation plan with specific file paths and changes.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: implement-code
+      agentRef:
+        name: code-generator
+      dependsOn: [plan-implementation]
+      input:
+        raw: '{"task": "Implement issue #${parameters.issueNumber} for ${parameters.repository}.\n\nSteps:\n1. Read current files with get_file_contents to understand the codebase\n2. Create branch with create_branch: name=feature/issue-${parameters.issueNumber}, from=${parameters.branch}\n3. Write ALL modified source files with create_or_update_file on branch feature/issue-${parameters.issueNumber}\n4. Write test files with create_or_update_file on the same branch\n5. STOP — you are done. Do NOT validate, do NOT create a PR.\n\nDo NOT use execute_code. Do NOT create a PR. Just read, create branch, write files, stop.", "repository": "${parameters.repository}", "branch": "${parameters.branch}", "issue": "${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: create-pr
+      agentRef:
+        name: pr-manager
+      dependsOn: [implement-code]
+      input:
+        raw: '{"task": "Create a pull request in ${parameters.repository} from branch feature/issue-${parameters.issueNumber} to ${parameters.branch}. Title: feat: implement issue #${parameters.issueNumber}. Body should describe what was implemented. Use create_pull_request.", "repository": "${parameters.repository}", "branch": "${parameters.branch}", "issue": "${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 120
+
+    - name: validate-tests
+      agentRef:
+        name: test-engineer
+      dependsOn: [create-pr]
+      input:
+        raw: '{"task": "Read the code pushed to ${parameters.repository} branch feature/issue-${parameters.issueNumber}. Verify the tests are correct and check for any missing test cases. Use execute_code to validate test logic if needed.", "repository": "${parameters.repository}", "branch": "feature/issue-${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: review
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [validate-tests]
+      input:
+        raw: '{"task": "Review the PR created for issue #${parameters.issueNumber} in ${parameters.repository}. Check the implementation on branch feature/issue-${parameters.issueNumber}. Evaluate: code quality, test coverage, Go idioms, error handling, acceptance criteria from the issue. Give verdict: approve or request_changes.", "repository": "${parameters.repository}", "branch": "feature/issue-${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: security-check
+      agentRef:
+        name: security-scanner
+      dependsOn: [implement-code]
+      input:
+        raw: '{"task": "Security scan the implementation for issue #${parameters.issueNumber} in ${parameters.repository} on branch feature/issue-${parameters.issueNumber}.", "repository": "${parameters.repository}", "branch": "feature/issue-${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: merge-if-approved
+      agentRef:
+        name: pr-manager
+      dependsOn: [review, security-check, validate-tests]
+      condition: 'steps.review.output.verdict == approve'
+      input:
+        raw: '{"task": "The review approved the PR for issue #${parameters.issueNumber} in ${parameters.repository}. Find the open PR from branch feature/issue-${parameters.issueNumber} and merge it using squash merge.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 120
+
+    - name: fix-if-rejected
+      agentRef:
+        name: code-generator
+      dependsOn: [review]
+      condition: 'steps.review.output.verdict == request_changes'
+      input:
+        raw: '{"task": "The code review for issue #${parameters.issueNumber} in ${parameters.repository} requested changes. Read the review findings from the previous step output. Fix every issue on branch feature/issue-${parameters.issueNumber}. Run tests to validate. Push the fixes.", "repository": "${parameters.repository}", "branch": "feature/issue-${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 1200
+
+    - name: re-review
+      agentRef:
+        name: sdlc-code-reviewer
+      dependsOn: [fix-if-rejected]
+      input:
+        raw: '{"task": "Re-review the PR for issue #${parameters.issueNumber} in ${parameters.repository} after fixes were applied on branch feature/issue-${parameters.issueNumber}. Verify all previous findings are addressed. Give verdict: approve or request_changes.", "repository": "${parameters.repository}", "branch": "feature/issue-${parameters.issueNumber}"}'
+      timeout:
+        timeoutSeconds: 600
+
+    - name: merge-after-rereview
+      agentRef:
+        name: pr-manager
+      dependsOn: [re-review]
+      condition: 'steps.re-review.output.verdict == approve'
+      input:
+        raw: '{"task": "Re-review approved the PR for issue #${parameters.issueNumber} in ${parameters.repository}. Find and merge the PR from branch feature/issue-${parameters.issueNumber} using squash merge.", "repository": "${parameters.repository}"}'
+      timeout:
+        timeoutSeconds: 120
+
+    - name: update-docs
+      agentRef:
+        name: documentation-writer
+      dependsOn: [merge-if-approved, merge-after-rereview]
+      input:
+        raw: '{"task": "Issue #${parameters.issueNumber} has been implemented and merged in ${parameters.repository}. Check if the README or other docs need updating to reflect the new functionality. Summarize what was added.", "repository": "${parameters.repository}", "branch": "${parameters.branch}"}'
+      timeout:
+        timeoutSeconds: 600

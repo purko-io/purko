@@ -1,0 +1,55 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: research-report
+  namespace: ai-agents
+  labels:
+    app.kubernetes.io/component: starter
+spec:
+  description: "Research question → investigate → analyze → draft report → review"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    question: ""
+    audience: "business stakeholders"
+    depth: "comprehensive"
+  steps:
+    - name: research
+      agentRef:
+        name: researcher
+      input:
+        raw: |
+          Research the following question: ${parameters.question}
+          Depth: ${parameters.depth}
+          Gather data, identify key findings, and note confidence levels.
+
+    - name: analyze
+      agentRef:
+        name: analyst
+      dependsOn: [research]
+      input:
+        raw: |
+          Analyze these research findings and extract actionable insights.
+          Target audience: ${parameters.audience}
+          Research findings: ${steps.research.output.response}
+
+    - name: draft-report
+      agentRef:
+        name: writer
+      dependsOn: [research, analyze]
+      input:
+        raw: |
+          Write a report for ${parameters.audience} on: ${parameters.question}
+          Research findings: ${steps.research.output.response}
+          Analysis and insights: ${steps.analyze.output.response}
+          Structure: Executive summary, key findings, analysis, recommendations, appendix.
+
+    - name: review
+      agentRef:
+        name: reviewer
+      dependsOn: [draft-report]
+      input:
+        raw: |
+          Review this research report for accuracy, completeness, and clarity.
+          Target audience: ${parameters.audience}
+          Report: ${steps.draft-report.output.response}

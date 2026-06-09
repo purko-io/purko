@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: purko-presets
+  namespace: ai-agents
+data:
+  presets: |
+    [
+      {
+        "name": "sre-investigator",
+        "type": "agent",
+        "icon": "\ud83d\udd0d",
+        "description": "Pod health, events, resource analysis",
+        "config": {
+          "name": "sre-investigator",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "temperature": 0.1,
+          "autonomy": "restricted",
+          "role": "sre-investigator",
+          "group": "investigation",
+          "image": "localhost/purko-executor:latest",
+          "systemPrompt": "You are a senior SRE investigator. Analyze Kubernetes cluster health by checking pod status, events, resource utilization, and log patterns. Produce structured findings with severity ratings.",
+          "tools": ["list_namespaces", "list_pods_in_namespace", "smart_get_namespace_events", "check_resource_constraints", "get_kubernetes_resource"],
+          "minReplicas": 1,
+          "maxReplicas": 3,
+          "targetCPU": 70
+        }
+      },
+      {
+        "name": "security-auditor",
+        "type": "agent",
+        "icon": "\ud83d\udd12",
+        "description": "RBAC, privileges, secrets, policies",
+        "config": {
+          "name": "security-auditor",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "temperature": 0.0,
+          "autonomy": "restricted",
+          "role": "security-auditor",
+          "group": "security",
+          "image": "localhost/purko-executor:latest",
+          "systemPrompt": "You are a Kubernetes security auditor. Scan for: privileged pods, missing resource limits, RBAC over-permissions, exposed secrets, network policy gaps. Report findings with CRITICAL/HIGH/MEDIUM/LOW severity.",
+          "tools": ["list_namespaces", "list_pods_in_namespace", "get_kubernetes_resource", "search_resources_by_labels", "check_resource_constraints", "smart_get_namespace_events"],
+          "minReplicas": 1,
+          "maxReplicas": 2,
+          "targetCPU": 70
+        }
+      },
+      {
+        "name": "incident-responder",
+        "type": "workflow",
+        "icon": "\ud83d\udea8",
+        "description": "Detect, triage, remediate, notify",
+        "config": {
+          "name": "incident-response",
+          "description": "Detect anomalies, triage incidents, attempt remediation, notify team",
+          "parallelism": 1,
+          "strategy": "continueOnError",
+          "steps": [
+            {"name": "detect", "agent": "anomaly-detector", "type": "", "dependsOn": []},
+            {"name": "triage", "agent": "incident-triage", "type": "", "dependsOn": ["detect"]},
+            {"name": "investigate", "agent": "cluster-investigator", "type": "", "dependsOn": ["detect"]},
+            {"name": "report", "agent": "report-generator", "type": "", "dependsOn": ["triage", "investigate"]}
+          ]
+        }
+      },
+      {
+        "name": "log-monitor",
+        "type": "agent",
+        "icon": "\ud83d\udcca",
+        "description": "Error patterns, anomalies, stack traces",
+        "config": {
+          "name": "log-monitor",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "temperature": 0.1,
+          "autonomy": "restricted",
+          "role": "log-monitor",
+          "group": "monitoring",
+          "image": "localhost/purko-executor:latest",
+          "systemPrompt": "You are a log monitoring agent. Analyze pod logs for error patterns, stack traces, recurring failures, and anomalies. Classify findings by severity and recommend fixes.",
+          "tools": ["analyze_logs", "detect_log_anomalies", "smart_summarize_pod_logs", "list_pods_in_namespace"],
+          "minReplicas": 1,
+          "maxReplicas": 3,
+          "targetCPU": 70
+        }
+      },
+      {
+        "name": "code-reviewer",
+        "type": "agent",
+        "icon": "\ud83d\udcbb",
+        "description": "Architecture, quality, test coverage",
+        "config": {
+          "name": "code-reviewer",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "temperature": 0.1,
+          "autonomy": "manual",
+          "role": "code-reviewer",
+          "group": "sdlc",
+          "image": "localhost/purko-executor:git",
+          "systemPrompt": "You are a code review expert. Analyze code for architecture patterns, error handling, security issues, performance problems, and test coverage gaps. Provide specific file-level findings.",
+          "tools": ["get_file_contents", "search_code", "list_commits"],
+          "minReplicas": 1,
+          "maxReplicas": 2,
+          "targetCPU": 70
+        }
+      },
+      {
+        "name": "cost-optimizer",
+        "type": "agent",
+        "icon": "\ud83d\udcb0",
+        "description": "Resource utilization, right-sizing",
+        "config": {
+          "name": "cost-optimizer",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "temperature": 0.2,
+          "autonomy": "manual",
+          "role": "cost-optimizer",
+          "group": "monitoring",
+          "image": "localhost/purko-executor:latest",
+          "systemPrompt": "You are a cost optimization agent. Analyze Kubernetes resource utilization to identify over-provisioned pods, idle resources, and right-sizing opportunities. Calculate potential savings.",
+          "tools": ["list_pods_in_namespace", "check_resource_constraints", "get_kubernetes_resource"],
+          "minReplicas": 1,
+          "maxReplicas": 1,
+          "targetCPU": 80
+        }
+      }
+    ]

@@ -1,0 +1,150 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{},"name":"lumino-cluster-reader"},"rules":[{"apiGroups":[""],"resources":["pods","pods/log","services","events","configmaps","secrets","namespaces","nodes","endpoints","resourcequotas","limitranges","persistentvolumeclaims","persistentvolumes","replicationcontrollers","serviceaccounts"],"verbs":["get","list","watch"]},{"apiGroups":["apps"],"resources":["deployments","replicasets","statefulsets","daemonsets"],"verbs":["get","list","watch"]},{"apiGroups":["batch"],"resources":["jobs","cronjobs"],"verbs":["get","list","watch"]},{"apiGroups":["autoscaling"],"resources":["horizontalpodautoscalers"],"verbs":["get","list","watch"]},{"apiGroups":["networking.k8s.io"],"resources":["ingresses","networkpolicies"],"verbs":["get","list","watch"]},{"apiGroups":["rbac.authorization.k8s.io"],"resources":["roles","rolebindings","clusterroles","clusterrolebindings"],"verbs":["get","list"]},{"apiGroups":["metrics.k8s.io"],"resources":["pods","nodes"],"verbs":["get","list"]},{"apiGroups":["certificates.k8s.io"],"resources":["certificatesigningrequests"],"verbs":["get","list"]},{"apiGroups":["storage.k8s.io"],"resources":["storageclasses"],"verbs":["get","list"]},{"apiGroups":["tekton.dev"],"resources":["*"],"verbs":["get","list","watch"]},{"apiGroups":["purko.io"],"resources":["*"],"verbs":["get","list"]},{"apiGroups":["machineconfiguration.openshift.io"],"resources":["machineconfigpools"],"verbs":["get","list"]},{"apiGroups":["config.openshift.io"],"resources":["clusteroperators"],"verbs":["get","list"]}]}
+  creationTimestamp: "2026-03-31T13:42:32Z"
+  name: lumino-cluster-reader
+  resourceVersion: "206487"
+  uid: d81af8eb-594c-47f8-bf0c-3e542b7af1a5
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  - services
+  - events
+  - configmaps
+  - secrets
+  - namespaces
+  - nodes
+  - endpoints
+  - resourcequotas
+  - limitranges
+  - persistentvolumeclaims
+  - persistentvolumes
+  - replicationcontrollers
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - tekton.dev
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - purko.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - machineconfiguration.openshift.io
+  resources:
+  - machineconfigpools
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusteroperators
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"annotations":{},"name":"lumino-mcp-servers-default"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"lumino-cluster-reader"},"subjects":[{"kind":"ServiceAccount","name":"default","namespace":"mcp-servers"}]}
+  creationTimestamp: "2026-04-03T07:16:58Z"
+  name: lumino-mcp-servers-default
+  resourceVersion: "206464"
+  uid: c61c3be4-1cb8-4f19-b594-cf91fd16a83e
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: lumino-cluster-reader
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: mcp-servers
