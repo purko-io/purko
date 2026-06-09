@@ -37,6 +37,6 @@ gcp-credentials.json
 
 # Project
 purko-operator
-operator
+/operator
 *.tar
 docs-site/site/
