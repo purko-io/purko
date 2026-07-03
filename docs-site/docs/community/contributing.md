@@ -53,6 +53,8 @@ chore: update Go dependencies
 
 ## Pull Request Process
 
+If you're new to the project, please introduce yourself by emailing **georgievski@purko.io** before you start. We'd love to connect, help you find the right area to contribute, and make sure your work aligns with the roadmap. Once we've connected, you're welcome to submit PRs freely.
+
 1. Fork the repository and create your branch from `main`
 2. Make your changes with clear, focused commits
 3. Fill out the pull request template

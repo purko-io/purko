@@ -51,6 +51,10 @@ docs: update CRD reference for MCPServer
 chore: update Go dependencies
 ```
 
+## Before You Contribute
+
+If you're new to the project, please introduce yourself by emailing **georgievski@purko.io** before you start. We'd love to connect, help you find the right area to contribute, and make sure your work aligns with the roadmap. Once we've connected, you're welcome to submit PRs freely.
+
 ## Pull Request Process
 
 1. Fork the repository and create your branch from `main`
