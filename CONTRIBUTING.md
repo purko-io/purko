@@ -16,7 +16,7 @@ Thank you for your interest in contributing to Purko! This document provides gui
 
 ```bash
 # Clone the repository
-git clone https://github.com/geored/purko.git
+git clone https://github.com/purko-io/purko.git
 cd purko
 
 # Build the operator
@@ -78,7 +78,7 @@ Commit the generated files along with your changes.
 
 ## Reporting Issues
 
-Use the [issue templates](https://github.com/geored/purko/issues/new/choose) to report bugs or request features. Please include:
+Use the [issue templates](https://github.com/purko-io/purko/issues/new/choose) to report bugs or request features. Please include:
 
 - Purko version (tag or commit)
 - Kubernetes version and environment (minikube, kind, OpenShift, etc.)
@@ -86,5 +86,5 @@ Use the [issue templates](https://github.com/geored/purko/issues/new/choose) to 
 
 ## Community
 
-- [GitHub Issues](https://github.com/geored/purko/issues) — bug reports, feature requests
-- [GitHub Discussions](https://github.com/geored/purko/discussions) — questions, ideas, general discussion
+- [GitHub Issues](https://github.com/purko-io/purko/issues) — bug reports, feature requests
+- [GitHub Discussions](https://github.com/purko-io/purko/discussions) — questions, ideas, general discussion

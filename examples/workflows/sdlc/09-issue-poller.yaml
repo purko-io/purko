@@ -11,7 +11,7 @@ spec:
   parallelism: 1
   failureStrategy: continueOnError
   parameters:
-    repository: "geored/taskctl"
+    repository: "purko-io/taskctl"
     label: "approved-for-dev"
   trigger:
     type: schedule

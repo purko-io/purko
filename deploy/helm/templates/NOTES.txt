@@ -18,4 +18,4 @@ Apply CRDs (if not already installed):
 Deploy example agents:
   kubectl apply -f examples/agents/sdlc/ -n {{ .Values.agentNamespace }}
 
-Documentation: https://github.com/geored/purko
+Documentation: https://github.com/purko-io/purko

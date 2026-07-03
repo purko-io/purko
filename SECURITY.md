@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Purko, please report it responsibly.
 
-**For now:** Open a [GitHub Issue](https://github.com/geored/purko/issues) with the `security` label. If the vulnerability is sensitive, please email the maintainers directly (contact information in the repository profile).
+**For now:** Open a [GitHub Issue](https://github.com/purko-io/purko/issues) with the `security` label. If the vulnerability is sensitive, please email the maintainers directly (contact information in the repository profile).
 
 **What to include:**
 - Description of the vulnerability

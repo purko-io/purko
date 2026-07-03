@@ -29,7 +29,7 @@ For local development, [minikube](https://minikube.sigs.k8s.io/) is the recommen
 Clone the repository and install from the local chart:
 
 ```bash
-git clone https://github.com/geored/purko.git
+git clone https://github.com/purko-io/purko.git
 cd purko
 helm install purko deploy/helm/ --create-namespace --namespace purko-system
 ```
