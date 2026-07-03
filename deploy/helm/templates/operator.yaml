@@ -37,17 +37,10 @@ spec:
           {{- end }}
           args:
             - --agent-namespace={{ .Values.agentNamespace }}
-            - --dashboard-port={{ .Values.dashboard.port }}
-            {{- if .Values.llm.provider }}
-            - --llm-provider={{ .Values.llm.provider }}
-            {{- end }}
-            - --llm-model={{ .Values.llm.model }}
             {{- if .Values.webhooks.enabled }}
             - --enable-webhooks=true
             {{- end }}
           ports:
-            - containerPort: {{ .Values.dashboard.port }}
-              name: dashboard
             - containerPort: 8080
               name: metrics
             - containerPort: 8081

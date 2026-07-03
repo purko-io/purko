@@ -16,6 +16,19 @@ rules:
   - apiGroups: ["purko.io"]
     resources: ["workflows", "workflows/status", "workflows/finalizers"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["purko.io"]
+    resources: ["mcpservers", "mcpservers/status", "mcpservers/finalizers"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["purko.io"]
+    resources: ["llmproviders", "llmproviders/status", "llmproviders/finalizers"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["purko.io"]
+    resources: ["agentautonomypolicies", "agentautonomypolicies/status"]
+    verbs: ["get", "list", "watch"]
+  # ServiceAccounts for controller-runtime cache
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
   # Jobs for workflow execution
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -32,7 +45,15 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
-  # Deployments and HPAs for dashboard overview
+  # Services for MCP server controller
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Namespaces for controller-runtime cache
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  # Deployments and HPAs
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch"]
