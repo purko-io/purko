@@ -38,10 +38,20 @@ logger = logging.getLogger('executor')
 
 # ── Config ────────────────────────────────────────────────────────────
 
+def env_int(name, default):
+    """Integer env var with fallback on missing or invalid values."""
+    try:
+        return int(os.environ.get(name, ''))
+    except (TypeError, ValueError):
+        return default
+
+
 MODEL_PROVIDER = os.environ.get('MODEL_PROVIDER', 'anthropic')
 MODEL_NAME = os.environ.get('MODEL_NAME', 'claude-sonnet-4-6')
 MODEL_API_KEY = os.environ.get('MODEL_API_KEY', '')
 MODEL_TEMPERATURE = float(os.environ.get('MODEL_TEMPERATURE', '0.2'))
+MODEL_MAX_TOKENS = env_int('MODEL_MAX_TOKENS', 4096)
+MODEL_TIMEOUT = env_int('MODEL_TIMEOUT', 120)
 VERTEX_PROJECT_ID = os.environ.get('ANTHROPIC_VERTEX_PROJECT_ID', '')
 VERTEX_REGION = os.environ.get('CLOUD_ML_REGION', 'us-east5')
 USE_VERTEX = bool(VERTEX_PROJECT_ID)
@@ -269,7 +279,7 @@ def call_anthropic(messages, system_prompt, tools=None):
     }
     body = {
         'model': MODEL_NAME,
-        'max_tokens': 4096,
+        'max_tokens': MODEL_MAX_TOKENS,
         'temperature': MODEL_TEMPERATURE,
         'system': system_prompt,
         'messages': messages,
@@ -280,7 +290,7 @@ def call_anthropic(messages, system_prompt, tools=None):
     url = MODEL_ENDPOINT + '/messages' if MODEL_ENDPOINT else 'https://api.anthropic.com/v1/messages'
     resp = requests.post(
         url,
-        headers=headers, json=body, timeout=120,
+        headers=headers, json=body, timeout=MODEL_TIMEOUT,
     )
     resp.raise_for_status()
     result = resp.json()
@@ -325,7 +335,7 @@ def call_anthropic_vertex(messages, system_prompt, tools=None):
 
     kwargs = {
         'model': model,
-        'max_tokens': 4096,
+        'max_tokens': MODEL_MAX_TOKENS,
         'temperature': MODEL_TEMPERATURE,
         'system': system_prompt,
         'messages': messages,
@@ -349,16 +359,29 @@ def call_anthropic_vertex(messages, system_prompt, tools=None):
     return result
 
 
+def llm_mode():
+    """LLM mode requires credentials OR a custom endpoint — keyless
+    endpoints (Ollama, vLLM, gateways) are valid LLM backends."""
+    return bool(MODEL_API_KEY or USE_VERTEX or MODEL_ENDPOINT)
+
+
+def openai_headers():
+    """Request headers for OpenAI-format APIs. The Authorization header is
+    omitted without an API key — an empty 'Bearer ' makes strict gateways
+    return 401, silently dropping the executor into demo mode."""
+    headers = {'Content-Type': 'application/json'}
+    if MODEL_API_KEY:
+        headers['Authorization'] = f'Bearer {MODEL_API_KEY}'
+    return headers
+
+
 def call_openai(messages, system_prompt, tools=None):
     """Call OpenAI API with tool support."""
-    headers = {
-        'Authorization': f'Bearer {MODEL_API_KEY}',
-        'Content-Type': 'application/json',
-    }
+    headers = openai_headers()
     msgs = [{'role': 'system', 'content': system_prompt}] + messages
     body = {
         'model': MODEL_NAME,
-        'max_tokens': 4096,
+        'max_tokens': MODEL_MAX_TOKENS,
         'temperature': MODEL_TEMPERATURE,
         'messages': msgs,
     }
@@ -370,10 +393,19 @@ def call_openai(messages, system_prompt, tools=None):
     url = MODEL_ENDPOINT + '/chat/completions' if MODEL_ENDPOINT else 'https://api.openai.com/v1/chat/completions'
     resp = requests.post(
         url,
-        headers=headers, json=body, timeout=120,
+        headers=headers, json=body, timeout=MODEL_TIMEOUT,
     )
     resp.raise_for_status()
-    return resp.json()
+    result = resp.json()
+    track_cost(*openai_usage(result))
+    return result
+
+
+def openai_usage(result):
+    """Token usage from an OpenAI-format response (prompt_tokens /
+    completion_tokens), zeros when the endpoint reports none."""
+    usage = result.get('usage') or {}
+    return usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0)
 
 
 # ── Tool Routing ──────────────────────────────────────────────────────
@@ -1069,6 +1101,19 @@ def extract_structured_fields(output):
     return output
 
 
+def wrap_model_text(text):
+    """Model output as a dict: JSON objects pass through; everything else
+    (plain text, bare JSON strings/lists/numbers) is wrapped — downstream
+    code requires a dict and crashes on other types."""
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    return {'response': text, 'step': STEP_NAME}
+
+
 def parse_anthropic_response(response, messages):
     content = response.get('content', [])
     text_parts = []
@@ -1092,10 +1137,7 @@ def parse_anthropic_response(response, messages):
         return None, tool_requests
 
     text = '\n'.join(text_parts)
-    try:
-        return json.loads(text), []
-    except json.JSONDecodeError:
-        return {'response': text, 'step': STEP_NAME}, []
+    return wrap_model_text(text), []
 
 
 def parse_openai_response(response, messages):
@@ -1114,10 +1156,7 @@ def parse_openai_response(response, messages):
         return None, tool_requests
 
     text = message.get('content', '')
-    try:
-        return json.loads(text), []
-    except json.JSONDecodeError:
-        return {'response': text, 'step': STEP_NAME}, []
+    return wrap_model_text(text), []
 
 
 # ── Tool Execution ────────────────────────────────────────────────────
@@ -1283,12 +1322,12 @@ def main():
     logger.info(f"Tool definitions for model: {len(tool_defs)}")
 
     # Run the ReAct loop
-    if MODEL_API_KEY or USE_VERTEX:
+    if llm_mode():
         endpoint_info = MODEL_ENDPOINT or ('Vertex AI' if USE_VERTEX else 'default')
         logger.info(f"LLM mode: {MODEL_API_FORMAT} format, endpoint: {endpoint_info}")
         output = run_react_loop(agent_tools, tool_defs)
     else:
-        logger.info("No MODEL_API_KEY or VERTEX_PROJECT_ID — running in demo mode")
+        logger.info("No MODEL_API_KEY, VERTEX_PROJECT_ID, or MODEL_ENDPOINT — running in demo mode")
         output = run_demo_mode(agent_tools)
 
     # Save memory for future executions
@@ -1311,6 +1350,16 @@ def main():
 
     print(f"OUTPUT:{output_json}")
     logger.info(f"Step completed: {len(output_json)} bytes, cost: ${total_cost_usd:.4f}")
+    sys.exit(output_exit_code(output))
+
+
+def output_exit_code(output):
+    """Non-zero when the step produced only an error — the Job must fail so
+    the controller records a Failed step and retries, instead of archiving
+    the error as a successful run."""
+    if isinstance(output, dict) and output.get('error'):
+        return 1
+    return 0
 
 
 if __name__ == '__main__':

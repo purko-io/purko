@@ -46,6 +46,10 @@ spec:
             - containerPort: 8081
               name: health
           env:
+            {{- if .Values.executor.hostNetwork }}
+            - name: PURKO_EXECUTOR_HOST_NETWORK
+              value: "true"
+            {{- end }}
             {{- if .Values.llm.credentials.vertexProjectId }}
             - name: ANTHROPIC_VERTEX_PROJECT_ID
               value: {{ .Values.llm.credentials.vertexProjectId | quote }}

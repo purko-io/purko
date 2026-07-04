@@ -28,6 +28,10 @@ The operator passes all inputs as environment variables. Your executor reads wha
 | `MODEL_NAME` | Agent `spec.model.name` | Yes | `claude-sonnet-4-6` |
 | `MODEL_API_KEY` | Resolved from `credentialsSecretRef` | No | `sk-ant-...` |
 | `MODEL_TEMPERATURE` | Agent `spec.model.temperature` | No | `0.2` |
+| `MODEL_MAX_TOKENS` | Agent `spec.model.maxTokens` | No | `4096` (default when unset) |
+| `MODEL_TIMEOUT` | Operator env (seconds per model API call) | No | `120` (default when unset) |
+| `MODEL_ENDPOINT` | LLMProvider `spec.endpoint` | No | `http://ollama.ai-agents:11434/v1` |
+| `MODEL_API_FORMAT` | LLMProvider `spec.apiFormat` | No | `openai` |
 | `AGENT_SYSTEM_PROMPT` | Agent `spec.systemPrompt` | No | `You are a code reviewer...` |
 | `AGENT_TOOLS` | Agent `spec.tools` serialized as JSON | No | `[{"name":"list_pods","type":"mcp"}]` |
 | `MCP_SERVERS` | Active MCPServer endpoints | No | `[{"name":"github","url":"http://...","token":"..."}]` |
@@ -80,6 +84,10 @@ inputFrom:
 | Non-zero | Failure — controller captures the last 20 lines of logs as the error message |
 
 When a step exits non-zero and `retryPolicy` is configured, the controller retries up to `maxRetries` times before marking the step as `Failed`.
+
+The default executor exits `1` when its output contains only an `error`
+field (e.g. the model API timed out or returned an error) — a failed model
+call must fail the Job rather than being archived as a successful step.
 
 ## Volume Mounts
 

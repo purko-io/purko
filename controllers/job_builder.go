@@ -82,6 +82,9 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 		{Name: "MODEL_PROVIDER", Value: agent.Spec.Model.Provider},
 		{Name: "MODEL_NAME", Value: agent.Spec.Model.Name},
 	}
+	if agent.Spec.Model.MaxTokens != nil {
+		env = append(env, corev1.EnvVar{Name: "MODEL_MAX_TOKENS", Value: fmt.Sprintf("%d", *agent.Spec.Model.MaxTokens)})
+	}
 
 	// LLM provider configuration from CRD
 	if llmProvider != nil {
@@ -304,11 +307,21 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 					},
 				},
 				Spec: func() corev1.PodSpec {
+					// Normal pod networking by default so executors reach
+					// in-cluster services (LLM endpoints, MCP servers) via
+					// cluster DNS. PURKO_EXECUTOR_HOST_NETWORK=true opts into
+					// host networking for local dev where MCP servers run on
+					// the node (e.g. minikube with localhost MCP servers).
+					hostNet := os.Getenv("PURKO_EXECUTOR_HOST_NETWORK") == "true"
+					dnsPolicy := corev1.DNSClusterFirst
+					if hostNet {
+						dnsPolicy = corev1.DNSDefault
+					}
 					spec := corev1.PodSpec{
 						RestartPolicy:      corev1.RestartPolicyNever,
 						ServiceAccountName: sa,
-						HostNetwork:        true,
-						DNSPolicy:          corev1.DNSDefault,
+						HostNetwork:        hostNet,
+						DNSPolicy:          dnsPolicy,
 						Containers: []corev1.Container{
 							{
 								Name:            "step-executor",
@@ -335,7 +348,7 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 									VolumeSource: corev1.VolumeSource{
 										ConfigMap: &corev1.ConfigMapVolumeSource{
 											LocalObjectReference: corev1.LocalObjectReference{Name: configRef.ConfigMapName},
-											Optional: boolPtr(true),
+											Optional:             boolPtr(true),
 										},
 									},
 								})

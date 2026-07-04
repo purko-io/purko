@@ -1,0 +1,285 @@
+{{- if .Values.starterAgents.enabled }}
+{{- /*
+  Starter agent library (the six archetypes) so a fresh install has a
+  working agent set visible in the dashboard. Source of truth for the
+  specs: examples/agents/archetypes/ — keep in sync when editing.
+  model.provider resolves against LLMProvider CRs by name and falls back
+  to the provider marked default, so these work with any configured LLM.
+*/}}
+{{- $ns := .Values.agentNamespace }}
+{{- $provider := .Values.starterAgents.provider }}
+{{- $model := .Values.starterAgents.model }}
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: task-router
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: router
+  autonomyLevel: restricted
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.0
+  role: task-router
+  guardrails:
+    maxIterations: 3
+    maxExecutionTime: "30s"
+    costLimitUSD: 0.5
+  systemPrompt: |
+    You are a routing agent. Classify the incoming request and
+    route it to the correct specialist: planner, executor,
+    reviewer, or retriever. Return the agent name and reasoning.
+
+    OUTPUT FORMAT:
+    ## Routing Decision
+    **targetAgent**: agent name
+    **reasoning**: why this agent was chosen
+    **sources**: which data sources to query (documentation, codebase, web)
+    **priority**: high|medium|low
+  tools:
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: list_namespaces
+      type: mcp
+---
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: project-planner
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: planner
+  autonomyLevel: restricted
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.3
+  role: project-planner
+  memory:
+    type: summary
+    maxContextTokens: 16384
+  guardrails:
+    maxIterations: 20
+    maxExecutionTime: "10m"
+    costLimitUSD: 5.0
+  systemPrompt: |
+    You are a project planning agent. Given a high-level objective,
+    decompose it into concrete, ordered tasks with dependencies,
+    estimated effort, and success criteria.
+  tools:
+    - name: search_code
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: list_issues
+      type: mcp
+    - name: search_issues
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+---
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: code-executor
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: executor
+  autonomyLevel: supervised
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.2
+  role: code-executor
+  runtime:
+    image: {{ .Values.executor.variants.codeact }}
+    codeExecution:
+      enabled: true
+      languages:
+        - python
+        - bash
+      sandbox:
+        maxExecutionSeconds: 30
+        maxOutputBytes: 100000
+        networkAccess: false
+  guardrails:
+    maxIterations: 50
+    maxExecutionTime: "15m"
+    humanApprovalRequired: true
+    costLimitUSD: 20.0
+  systemPrompt: |
+    You are a code execution agent. Implement the specified task
+    following best practices. Write tests for all new code.
+    You can execute Python and bash code using the execute_code tool.
+    You can also interact with GitHub using the MCP tools.
+  tools:
+    - name: code-sandbox
+      type: function
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: push_files
+      type: mcp
+---
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: code-reviewer
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: reviewer
+  autonomyLevel: restricted
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.1
+  role: code-reviewer
+  guardrails:
+    maxIterations: 5
+    maxExecutionTime: "5m"
+    costLimitUSD: 3.0
+    contentFilters:
+      - no-secrets-in-output
+  systemPrompt: |
+    You are a senior code reviewer. Evaluate changes for:
+    correctness, security vulnerabilities, performance,
+    readability, and test coverage. Provide structured feedback.
+    Use the static-analysis builtin tool to check code for common issues.
+  tools:
+    - name: static-analysis
+      type: builtin
+    - name: get_file_contents
+      type: mcp
+    - name: search_code
+      type: mcp
+    - name: list_pull_requests
+      type: mcp
+    - name: search_pull_requests
+      type: mcp
+    - name: list_commits
+      type: mcp
+---
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: system-monitor
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: monitor
+  autonomyLevel: restricted
+  replicas: 1
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.1
+  role: system-monitor
+  guardrails:
+    maxIterations: 10
+    maxExecutionTime: "2m"
+    costLimitUSD: 1.0
+  systemPrompt: |
+    You are a monitoring agent. Analyze metrics, logs, and alerts.
+    Identify anomalies and recommend corrective actions.
+
+    RESPONSIBILITIES:
+    1. Query Prometheus for key SLI/SLO metrics
+    2. Check for alerting conditions
+    3. Summarize cluster health status
+    4. Recommend actions if thresholds are breached
+
+    OUTPUT FORMAT:
+    ## System Health Report
+    **status**: healthy|degraded|critical
+    **alerts**: list of active alerts
+    **metrics**: key metrics summary
+    **recommendations**: suggested actions
+  tools:
+    - name: prometheus_query
+      type: mcp
+    - name: detect_anomalies
+      type: mcp
+    - name: list_pods_in_namespace
+      type: mcp
+    - name: smart_get_namespace_events
+      type: mcp
+    - name: check_resource_constraints
+      type: mcp
+---
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: knowledge-retriever
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/component: starter-agents
+    app.kubernetes.io/part-of: purko
+spec:
+  type: retriever
+  autonomyLevel: restricted
+  model:
+    provider: {{ $provider }}
+    name: {{ $model }}
+    temperature: 0.3
+  role: knowledge-retriever
+  memory:
+    type: vector
+    maxContextTokens: 32768
+    persistentStorage:
+      enabled: true
+      volumeClaimRef: knowledge-retriever-memory
+  guardrails:
+    maxIterations: 15
+    maxExecutionTime: "5m"
+    costLimitUSD: 8.0
+  systemPrompt: |
+    You are a research agent. Search the knowledge base for
+    relevant information, synthesize findings, and provide
+    comprehensive answers with citations.
+    Use vector-search to find relevant previous research from your memory.
+  tools:
+    - name: vector-search
+      type: function
+    - name: search_code
+      type: mcp
+    - name: get_file_contents
+      type: mcp
+    - name: search_repositories
+      type: mcp
+    - name: semantic_log_search
+      type: mcp
+    - name: analyze_logs
+      type: mcp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: knowledge-retriever-memory
+  namespace: {{ $ns }}
+  labels:
+    purko.io/agent: knowledge-retriever
+    purko.io/memory-type: vector
+    app.kubernetes.io/component: starter-agents
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{- end }}

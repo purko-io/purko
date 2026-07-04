@@ -122,6 +122,19 @@ llmproviders          llm   purko.io/v1alpha1    true    LLMProvider
 
 The short names (`ag`, `wf`, `mcp`, `llm`) can be used anywhere you would type the full resource name.
 
+The chart also installs the **starter agent library** — six archetype agents
+(task-router, project-planner, code-executor, code-reviewer, system-monitor,
+knowledge-retriever) so the dashboard has a working agent set immediately:
+
+```bash
+kubectl get agents -n ai-agents
+```
+
+Their model provider/name come from `starterAgents.provider` and
+`starterAgents.model` in the Helm values (the provider name resolves against
+your LLMProvider resources, falling back to the one marked `default: true`).
+Set `starterAgents.enabled: false` if you manage agents yourself.
+
 ---
 
 ## Step 3 — Access the Dashboard (Pro)
