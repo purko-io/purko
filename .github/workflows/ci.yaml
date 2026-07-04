@@ -26,6 +26,21 @@ jobs:
       - name: Test
         run: go test ./... -v -count=1
 
+      - name: Dashboard static bundle digest (Spec 28)
+        # dashboard/static/ is a byte-identical copy of the private upstream
+        # bundle, recorded in static.sha256 by the sync script. Never
+        # hand-edit OSS JS: a drifted bundle desynchronizes Pro teasers from
+        # the compiled-in endpoints. Fails on post-sync divergence.
+        run: |
+          cd dashboard
+          digest=$(find static -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1)
+          recorded=$(cat static.sha256)
+          if [ "$digest" != "$recorded" ]; then
+            echo "dashboard/static/ differs from recorded digest ($digest != $recorded)"
+            echo "Do not hand-edit OSS static files; run the upstream sync script."
+            exit 1
+          fi
+
   python-check:
     name: Python Executor Check
     runs-on: ubuntu-latest

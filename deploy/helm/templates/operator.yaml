@@ -40,11 +40,20 @@ spec:
             {{- if .Values.webhooks.enabled }}
             - --enable-webhooks=true
             {{- end }}
+            {{- if .Values.dashboard.enabled }}
+            - --dashboard-port={{ .Values.dashboard.port }}
+            {{- else }}
+            - --dashboard-enabled=false
+            {{- end }}
           ports:
             - containerPort: 8080
               name: metrics
             - containerPort: 8081
               name: health
+            {{- if .Values.dashboard.enabled }}
+            - containerPort: {{ .Values.dashboard.port }}
+              name: dashboard
+            {{- end }}
           env:
             {{- if .Values.llm.credentials.vertexProjectId }}
             - name: ANTHROPIC_VERTEX_PROJECT_ID

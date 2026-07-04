@@ -44,7 +44,7 @@ llm:
     secretKey: "api-key"
 
 dashboard:
-  enabled: false
+  enabled: true    # Spec 28: community dashboard (Pro features render upgrade teasers)
   port: 8082
 
 webhooks:

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 	"os"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -19,6 +20,7 @@ import (
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 	"github.com/purko-io/purko/controllers"
+	"github.com/purko-io/purko/dashboard"
 	"github.com/purko-io/purko/pkg/licensing"
 	"github.com/purko-io/purko/pkg/registry"
 	"github.com/purko-io/purko/webhooks"
@@ -36,15 +38,19 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var webhookPort int
+	var dashboardPort int
 	var enableLeaderElection bool
 	var enableWebhooks bool
+	var enableDashboard bool
 	var agentNamespace string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443, "Webhook server port.")
+	flag.IntVar(&dashboardPort, "dashboard-port", 8082, "Dashboard web UI port.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for HA.")
 	flag.BoolVar(&enableWebhooks, "enable-webhooks", false, "Enable admission webhooks.")
+	flag.BoolVar(&enableDashboard, "dashboard-enabled", true, "Enable embedded dashboard.")
 	flag.StringVar(&agentNamespace, "agent-namespace", "ai-agents", "Namespace for agents and workflows.")
 	opts := zap.Options{Development: true}
 	opts.BindFlags(flag.CommandLine)
@@ -172,6 +178,36 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	mcpRegistry.StartBackgroundSync(ctx)
+
+	// Start the embedded community dashboard (Spec 28).
+	// No LLM wiring: LLMConfig/NewLLMProvider/NewIntentLLMProvider are
+	// Pro-only and not compiled into this edition; the LLM/IntentLLM fields
+	// stay nil (the interface is shared via llm_iface.go). The history store
+	// stays unwired in Phase 1: /api/history/* returns 503.
+	if enableDashboard {
+		sched := &dashboard.Scheduler{
+			Client:    mgr.GetClient(),
+			Namespace: agentNamespace,
+		}
+		go sched.Start(ctx)
+
+		dash := &dashboard.Server{
+			Client:    mgr.GetClient(),
+			Clientset: clientset,
+			Port:      dashboardPort,
+			Scheduler: sched,
+			Registry:  mcpRegistry,
+			Namespace: agentNamespace,
+		}
+		go func() {
+			if err := dash.Start(ctx); err != nil && err != http.ErrServerClosed {
+				logger.Error(err, "dashboard server failed")
+			}
+		}()
+		logger.Info("Embedded dashboard enabled (community)", "port", dashboardPort)
+	} else {
+		logger.Info("Embedded dashboard disabled")
+	}
 
 	logger.Info("Starting purko-operator (Community Edition)",
 		"metricsAddr", metricsAddr,

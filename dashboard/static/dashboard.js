@@ -1,0 +1,117 @@
+// Purko Dashboard — Tab 1: Platform Overview
+
+function init_dashboard() {
+  if (state.data) render_dashboard(state.data);
+  else fetch('/api/overview').then(r => r.json()).then(d => { state.data = d; render_dashboard(d); });
+}
+
+function update_dashboard(d) {
+  render_dashboard(d);
+}
+
+function render_dashboard(d) {
+  // Collect metrics from agents (need detail calls)
+  const el = document.getElementById('view-dashboard');
+
+  // Fetch all agent details for metrics + shu-ha-ri
+  fetch('/api/agents').then(r => r.json()).then(agents => {
+    const promises = agents.map(a => fetch('/api/agent/' + a.name).then(r => r.json()));
+    Promise.all(promises).then(details => {
+      let totalInv = 0, totalTokens = 0, totalCost = 0;
+      let shr = { shu: 0, ha: 0, ri: 0 };
+      let topAgents = [];
+
+      for (const det of details) {
+        const a = det.agent;
+        const m = a.status && a.status.metrics;
+        const s = a.status && a.status.shuHaRi;
+        if (s) shr[s.currentLevel] = (shr[s.currentLevel] || 0) + 1;
+        if (m && m.totalInvocations > 0) {
+          totalInv += m.totalInvocations;
+          totalTokens += m.totalTokensUsed;
+          totalCost += m.totalCostUSD;
+          topAgents.push({ name: a.metadata.name, cost: m.totalCostUSD, inv: m.totalInvocations, tokens: m.totalTokensUsed });
+        }
+      }
+      topAgents.sort((a, b) => b.cost - a.cost);
+
+      // MCP tool count
+      const mcpCount = state.mcpTools.length;
+      const mcpServers = new Set(state.mcpTools.map(t => t.source)).size;
+
+      el.innerHTML = `
+        <div class="cards">
+          <div class="card card--blue">
+            <div class="card-value">${d.agentCount}</div>
+            <div class="card-label">Agents</div>
+            <div class="card-sub">${d.agentReady} Ready</div>
+          </div>
+          <div class="card card--purple">
+            <div class="card-value">${d.workflowCount}</div>
+            <div class="card-label">Workflows</div>
+            <div class="card-sub">${d.wfRunning} Running</div>
+          </div>
+          <div class="card card--green">
+            <div class="card-value">${mcpServers}</div>
+            <div class="card-label">MCP Servers</div>
+            <div class="card-sub">${mcpCount} tools</div>
+          </div>
+          <div class="card card--amber">
+            <div class="card-value">$${totalCost.toFixed(2)}</div>
+            <div class="card-label">Total Cost</div>
+            <div class="card-sub">${(totalTokens/1000).toFixed(0)}K tokens</div>
+          </div>
+          <div class="card card--green">
+            <div class="card-value">${d.wfSucceeded}</div>
+            <div class="card-label">Succeeded</div>
+          </div>
+          ${d.wfFailed > 0 ? `<div class="card card--red"><div class="card-value">${d.wfFailed}</div><div class="card-label">Failed</div></div>` : ''}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
+          <div class="panel" style="margin-top:0">
+            <h3>Shu-Ha-Ri Distribution</h3>
+            <div style="display:flex;gap:20px;margin-top:14px">
+              <div style="text-align:center"><div class="card-value" style="color:var(--amber);font-size:24px">${shr.shu}</div><div class="card-label">Shu</div></div>
+              <div style="text-align:center"><div class="card-value" style="color:var(--accent);font-size:24px">${shr.ha}</div><div class="card-label">Ha</div></div>
+              <div style="text-align:center"><div class="card-value" style="color:var(--green);font-size:24px">${shr.ri}</div><div class="card-label">Ri</div></div>
+            </div>
+            <div class="progress" style="margin-top:14px">
+              <div style="display:flex;height:100%">
+                <div class="progress-fill shr-shu" style="width:${d.agentCount ? (shr.shu/d.agentCount*100) : 0}%"></div>
+                <div class="progress-fill shr-ha" style="width:${d.agentCount ? (shr.ha/d.agentCount*100) : 0}%"></div>
+                <div class="progress-fill shr-ri" style="width:${d.agentCount ? (shr.ri/d.agentCount*100) : 0}%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0">
+            <h3>Top Agents by Cost</h3>
+            ${topAgents.length > 0 ? `<table style="margin-top:10px"><thead><tr><th>Agent</th><th>Cost</th><th>Invocations</th></tr></thead><tbody>
+              ${topAgents.slice(0, 5).map(a => `<tr><td><span class="clickable" onclick="router.go('agents',{type:'agent',name:'${a.name}'})">${a.name}</span></td><td class="mono">$${a.cost.toFixed(4)}</td><td>${a.inv}</td></tr>`).join('')}
+            </tbody></table>` : '<div class="empty" style="padding:20px">No metrics yet</div>'}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">
+            Recent Workflows
+            <span class="badge">${d.workflows.length}</span>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Phase</th><th>Steps</th><th>Duration</th><th>Age</th></tr></thead>
+            <tbody>
+              ${d.workflows.slice(0, 10).map(w => `<tr>
+                <td><span class="clickable" onclick="router.go('workflows',{type:'workflow',name:'${w.name}'})">${w.name}</span></td>
+                <td>${phaseHTML(w.phase)}</td>
+                <td>${w.completedSteps}/${w.totalSteps}</td>
+                <td class="mono">${w.duration || '-'}</td>
+                <td class="mono">${shortAge(w.age)}</td>
+              </tr>`).join('')}
+              ${d.workflows.length === 0 ? '<tr><td colspan="5" class="empty">No workflows</td></tr>' : ''}
+            </tbody>
+          </table>
+        </div>
+      `;
+    });
+  });
+}
