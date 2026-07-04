@@ -69,7 +69,7 @@ function render_dashboard(d) {
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
-          <div class="panel" style="margin-top:0">
+          ${hasFeature('autonomy') ? `<div class="panel" style="margin-top:0">
             <h3>Shu-Ha-Ri Distribution</h3>
             <div style="display:flex;gap:20px;margin-top:14px">
               <div style="text-align:center"><div class="card-value" style="color:var(--amber);font-size:24px">${shr.shu}</div><div class="card-label">Shu</div></div>
@@ -83,7 +83,7 @@ function render_dashboard(d) {
                 <div class="progress-fill shr-ri" style="width:${d.agentCount ? (shr.ri/d.agentCount*100) : 0}%"></div>
               </div>
             </div>
-          </div>
+          </div>` : upgradeCard('Shu-Ha-Ri Autonomy', 'Agents earn autonomy automatically — supervised to trusted, with promotion and demotion driven by their track record.')}
           <div class="panel" style="margin-top:0">
             <h3>Top Agents by Cost</h3>
             ${topAgents.length > 0 ? `<table style="margin-top:10px"><thead><tr><th>Agent</th><th>Cost</th><th>Invocations</th></tr></thead><tbody>
