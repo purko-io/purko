@@ -23,9 +23,9 @@ var Limits = map[Tier]TierLimits{
 		MaxClusters:        1,
 		MaxUsers:           0,
 		DAGWorkflows:       false,
-		WebDashboard:       false,
+		WebDashboard:       true, // Spec 28: community ships a limited dashboard
 		IntentBar:          false,
-		VisualBuilder:      false,
+		VisualBuilder:      true, // part of the shared dashboard bundle (Spec 28)
 		WebhookEvents:      0,
 		HistoryRetention:   7,
 	},
