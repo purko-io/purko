@@ -193,6 +193,29 @@ For Vertex AI, a GCP service account JSON key is stored in a Secret and mounted 
 
 ---
 
+## Admission Webhook TLS
+
+With `webhooks.enabled: true`, the chart deploys validating webhooks for
+Agents and Workflows. Webhook TLS is provisioned one of two ways:
+
+- **Chart-generated certificates (default):** Helm generates a CA and serving
+  certificate at install time (`genCA`/`genSignedCert`), stores them in the
+  `purko-webhook-server-cert` Secret, and injects the CA into the
+  `ValidatingWebhookConfiguration` `caBundle`. Existing certificates are
+  reused on upgrade (via `lookup`), so they are not rotated on every
+  `helm upgrade`.
+- **cert-manager (`webhooks.certManager.enabled: true`):** the chart creates
+  a self-signed Issuer and Certificate instead, and cert-manager's CA
+  injector maintains the `caBundle`. Use this in production clusters that
+  already run cert-manager.
+
+The serving certificate is mounted read-only at
+`/tmp/k8s-webhook-server/serving-certs`, where controller-runtime's webhook
+server expects it. All webhooks use `failurePolicy: Fail` — invalid resources
+are rejected even if the operator is briefly unavailable.
+
+---
+
 ## Network Considerations
 
 MCP servers run as ClusterIP services in production. The executor pods connect to them via DNS (`http://{service}.{namespace}.svc.cluster.local:{port}`). No external ingress is required for MCP communication.

@@ -49,6 +49,11 @@ dashboard:
 
 webhooks:
   enabled: false
+  # By default the chart generates a self-signed CA + serving cert at install
+  # time (reused across upgrades). Enable certManager to delegate cert
+  # lifecycle to cert-manager instead (requires cert-manager >= 1.0).
+  certManager:
+    enabled: false
 
 namespace: purko-system
 agentNamespace: ai-agents
