@@ -29,6 +29,12 @@ executor:
   variants:
     git: ghcr.io/purko-io/purko-executor:git
     dev: ghcr.io/purko-io/purko-executor:dev
+    codeact: ghcr.io/purko-io/purko-executor:codeact
+  # Host networking for executor pods. Leave false so executors reach
+  # in-cluster services (LLM endpoints, MCP servers) via cluster DNS.
+  # Set true only for local dev where MCP servers run on the node
+  # (e.g. minikube with MCP servers on localhost).
+  hostNetwork: false
 
 llm:
   # Provider: vertex-ai | anthropic | openai | "" (auto-detect from env)
@@ -64,19 +70,34 @@ webhooks:
 namespace: purko-system
 agentNamespace: ai-agents
 
+# Starter agent library — installs the six archetype agents (router, planner,
+# code executor, code reviewer, monitor, retriever) so a fresh install has a
+# working agent set. Disable for clusters that manage agents themselves.
+# provider resolves against LLMProvider CRs by name, falling back to the
+# provider marked `default: true`.
+starterAgents:
+  enabled: true
+  provider: anthropic
+  model: claude-sonnet-4-6
+
 # MCP servers registered in the platform
-mcpServers:
-  - name: lumino
-    url: http://localhost:8000
-    auth: none
-    icon: "\U0001F537"
-    category: kubernetes
-  - name: github
-    url: http://localhost:9090
-    auth: bearer
-    secretRef: github-mcp-token
-    icon: "\U0001F419"
-    category: code
+# MCP servers registered in the platform. Empty by default — servers that
+# point at endpoints which do not exist show as permanently Failed in the
+# dashboard. Register real servers here or via the MCPServer CRD.
+mcpServers: []
+# Example:
+# mcpServers:
+#   - name: lumino
+#     url: http://lumino.ai-agents:8000
+#     auth: none
+#     icon: "\U0001F537"
+#     category: kubernetes
+#   - name: github
+#     url: http://github-mcp.ai-agents:9090
+#     auth: bearer
+#     secretRef: github-mcp-token
+#     icon: "\U0001F419"
+#     category: code
 
 # Quick deploy presets (loaded into purko-presets ConfigMap)
 presets: []
