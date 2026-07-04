@@ -54,6 +54,12 @@ webhooks:
   # lifecycle to cert-manager instead (requires cert-manager >= 1.0).
   certManager:
     enabled: false
+  tls:
+    # Name of the Secret holding the webhook serving certificate. Shared by
+    # webhook.yaml (Secret/Certificate/caBundle) and the operator's cert
+    # volume mount. Point at a pre-provisioned kubernetes.io/tls Secret to
+    # bring your own certificates.
+    secretName: purko-webhook-server-cert
 
 namespace: purko-system
 agentNamespace: ai-agents

@@ -7,12 +7,13 @@
   and caBundle are then managed by cert-manager's CA injector.
 */}}
 {{- $svcName := "purko-webhook" }}
-{{- $secretName := "purko-webhook-server-cert" }}
+{{- $secretName := .Values.webhooks.tls.secretName }}
 {{- $altNames := list (printf "%s.%s.svc" $svcName .Values.namespace) (printf "%s.%s.svc.cluster.local" $svcName .Values.namespace) }}
-{{- $existing := lookup "v1" "Secret" .Values.namespace $secretName }}
 {{- $caCert := "" }}
 {{- $tlsCert := "" }}
 {{- $tlsKey := "" }}
+{{- if not .Values.webhooks.certManager.enabled }}
+{{- $existing := lookup "v1" "Secret" .Values.namespace $secretName }}
 {{- if $existing }}
 {{- $caCert = index $existing.data "ca.crt" }}
 {{- $tlsCert = index $existing.data "tls.crt" }}
@@ -23,6 +24,7 @@
 {{- $caCert = $ca.Cert | b64enc }}
 {{- $tlsCert = $cert.Cert | b64enc }}
 {{- $tlsKey = $cert.Key | b64enc }}
+{{- end }}
 {{- end }}
 {{- if not .Values.webhooks.certManager.enabled }}
 apiVersion: v1

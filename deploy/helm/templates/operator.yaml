@@ -99,6 +99,6 @@ spec:
         {{- if .Values.webhooks.enabled }}
         - name: webhook-certs
           secret:
-            secretName: purko-webhook-server-cert
+            secretName: {{ .Values.webhooks.tls.secretName }}
         {{- end }}
       {{- end }}
