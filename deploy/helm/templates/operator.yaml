@@ -75,16 +75,30 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.operator.resources | nindent 12 }}
-          {{- if .Values.llm.credentials.vertexProjectId }}
+          {{- if or .Values.llm.credentials.vertexProjectId .Values.webhooks.enabled }}
           volumeMounts:
+            {{- if .Values.llm.credentials.vertexProjectId }}
             - name: gcp-creds
               mountPath: /var/run/secrets/gcp
               readOnly: true
+            {{- end }}
+            {{- if .Values.webhooks.enabled }}
+            - name: webhook-certs
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if .Values.llm.credentials.vertexProjectId }}
+      {{- if or .Values.llm.credentials.vertexProjectId .Values.webhooks.enabled }}
       volumes:
+        {{- if .Values.llm.credentials.vertexProjectId }}
         - name: gcp-creds
           secret:
             secretName: {{ .Values.llm.credentials.gcpSecretName }}
             optional: true
+        {{- end }}
+        {{- if .Values.webhooks.enabled }}
+        - name: webhook-certs
+          secret:
+            secretName: {{ .Values.webhooks.tls.secretName }}
+        {{- end }}
       {{- end }}

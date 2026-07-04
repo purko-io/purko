@@ -25,10 +25,15 @@ rules:
   - apiGroups: ["purko.io"]
     resources: ["agentautonomypolicies", "agentautonomypolicies/status"]
     verbs: ["get", "list", "watch"]
-  # ServiceAccounts for controller-runtime cache
+  # ServiceAccounts owned by agents — the agent controller provisions one
+  # per agent (ensureServiceAccount), so write verbs are required
   - apiGroups: [""]
     resources: ["serviceaccounts"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  # Roles/RoleBindings for agent runtime permissions (agent controller)
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
   # Jobs for workflow execution
   - apiGroups: ["batch"]
     resources: ["jobs"]

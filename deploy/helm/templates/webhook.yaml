@@ -1,16 +1,65 @@
 {{- if .Values.webhooks.enabled }}
+{{- /*
+  Webhook TLS: a CA and serving certificate are generated at install/upgrade
+  time with Helm's genCA/genSignedCert. An existing cert Secret is reused
+  (via lookup) so upgrades do not rotate certificates. For production with
+  cert-manager, set webhooks.certManager.enabled=true instead — the Secret
+  and caBundle are then managed by cert-manager's CA injector.
+*/}}
+{{- $svcName := "purko-webhook" }}
+{{- $secretName := .Values.webhooks.tls.secretName }}
+{{- $altNames := list (printf "%s.%s.svc" $svcName .Values.namespace) (printf "%s.%s.svc.cluster.local" $svcName .Values.namespace) }}
+{{- $caCert := "" }}
+{{- $tlsCert := "" }}
+{{- $tlsKey := "" }}
+{{- if not .Values.webhooks.certManager.enabled }}
+{{- $existing := lookup "v1" "Secret" .Values.namespace $secretName }}
+{{- if $existing }}
+{{- $caCert = index $existing.data "ca.crt" }}
+{{- $tlsCert = index $existing.data "tls.crt" }}
+{{- $tlsKey = index $existing.data "tls.key" }}
+{{- else }}
+{{- $ca := genCA "purko-webhook-ca" 3650 }}
+{{- $cert := genSignedCert $svcName nil $altNames 3650 $ca }}
+{{- $caCert = $ca.Cert | b64enc }}
+{{- $tlsCert = $cert.Cert | b64enc }}
+{{- $tlsKey = $cert.Key | b64enc }}
+{{- end }}
+{{- end }}
+{{- if not .Values.webhooks.certManager.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: purko
+type: kubernetes.io/tls
+data:
+  ca.crt: {{ $caCert }}
+  tls.crt: {{ $tlsCert }}
+  tls.key: {{ $tlsKey }}
+---
+{{- end }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: purko-validating-webhook
   labels:
     app.kubernetes.io/part-of: purko
+  {{- if .Values.webhooks.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Values.namespace }}/purko-webhook-cert
+  {{- end }}
 webhooks:
   - name: vagent.purko.io
     admissionReviewVersions: ["v1"]
     clientConfig:
+      {{- if not .Values.webhooks.certManager.enabled }}
+      caBundle: {{ $caCert }}
+      {{- end }}
       service:
-        name: purko-webhook
+        name: {{ $svcName }}
         namespace: {{ .Values.namespace }}
         path: /validate-purko-io-v1alpha1-agent
     rules:
@@ -23,8 +72,11 @@ webhooks:
   - name: vworkflow.purko.io
     admissionReviewVersions: ["v1"]
     clientConfig:
+      {{- if not .Values.webhooks.certManager.enabled }}
+      caBundle: {{ $caCert }}
+      {{- end }}
       service:
-        name: purko-webhook
+        name: {{ $svcName }}
         namespace: {{ .Values.namespace }}
         path: /validate-purko-io-v1alpha1-workflow
     rules:
@@ -38,7 +90,7 @@ webhooks:
 apiVersion: v1
 kind: Service
 metadata:
-  name: purko-webhook
+  name: {{ $svcName }}
   namespace: {{ .Values.namespace }}
 spec:
   ports:
@@ -46,4 +98,28 @@ spec:
       targetPort: 9443
   selector:
     app.kubernetes.io/name: purko-operator
+{{- if .Values.webhooks.certManager.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: purko-selfsigned-issuer
+  namespace: {{ .Values.namespace }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: purko-webhook-cert
+  namespace: {{ .Values.namespace }}
+spec:
+  secretName: {{ $secretName }}
+  dnsNames:
+    {{- range $altNames }}
+    - {{ . }}
+    {{- end }}
+  issuerRef:
+    name: purko-selfsigned-issuer
+{{- end }}
 {{- end }}
