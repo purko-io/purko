@@ -207,6 +207,21 @@ spec:
 | `name` | string | Yes | Environment variable name |
 | `value` | string | Yes | Environment variable value |
 
+## Credential References
+
+There are two credential reference points, for two different things:
+
+| Field | Credential for | Consumed by |
+|-------|----------------|-------------|
+| `spec.model.credentialsSecretRef` | The LLM provider API key | Passed to the executor as `MODEL_API_KEY` |
+| `spec.tools[].credentialsSecretRef` | A specific tool's endpoint | Passed to the tool's MCP client |
+
+Both reference a Secret in the agent's namespace (`name` + optional `key`,
+default `api-key`). There is no agent-level credential field. When the
+agent's provider resolves to an `LLMProvider` resource, credentials from
+that provider's `spec.credentials` take precedence — prefer configuring
+credentials once on the LLMProvider over per-agent secrets.
+
 ## Status Fields
 
 | Field | Type | Description |

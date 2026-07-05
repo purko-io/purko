@@ -112,6 +112,10 @@ jobs:
         run: |
           sed -i "s/version: .*/version: ${{ steps.version.outputs.VERSION }}/" deploy/helm/Chart.yaml
           sed -i "s/appVersion: .*/appVersion: \"${{ steps.version.outputs.VERSION }}\"/" deploy/helm/Chart.yaml
+          # Bundle CRDs so OCI installs work standalone. Helm installs a
+          # chart's crds/ dir on install but never upgrades them — CRD
+          # upgrades still require: kubectl apply -f crds/
+          cp -r crds deploy/helm/crds
           helm package deploy/helm/
 
       - name: Push to GHCR

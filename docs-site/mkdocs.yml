@@ -48,6 +48,7 @@ nav:
   - Home: index.md
   - Getting Started:
     - Installation: getting-started/installation.md
+    - Production Deployment: getting-started/production.md
     - Your First Agent: getting-started/first-agent.md
     - Your First Workflow: getting-started/first-workflow.md
     - Connect MCP Servers: getting-started/connect-mcp.md

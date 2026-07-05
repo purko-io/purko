@@ -18,17 +18,29 @@ Define AI agents as Kubernetes custom resources, wire them into DAG workflows, c
 
 ### 1. Install Purko
 
+Install the CRDs, then the chart:
+
+```bash
+kubectl apply -k "https://github.com/purko-io/purko/crds?ref=main"
+```
+
 **Option A: Helm chart from OCI registry (recommended)**
 ```bash
-helm install purko oci://ghcr.io/purko-io/purko
+helm install purko oci://ghcr.io/purko-io/purko \
+  --namespace purko-system --create-namespace
 ```
 
 **Option B: From source**
 ```bash
 git clone https://github.com/purko-io/purko.git
 cd purko
-helm install purko deploy/helm/
+kubectl apply -f crds/
+helm install purko deploy/helm/ --namespace purko-system --create-namespace
 ```
+
+Running on minikube or a production cluster? See the
+[installation guide](https://purko-io.github.io/purko/getting-started/installation/)
+and the [production deployment guide](https://purko-io.github.io/purko/getting-started/production/).
 
 Verify the operator is running:
 ```bash

@@ -85,23 +85,22 @@ type AgentList struct {
 }
 
 type AgentSpec struct {
-	Type                string      `json:"type,omitempty"` // planner, executor, reviewer, router, monitor, retriever
-	Model               ModelSpec    `json:"model"`
-	Role                string      `json:"role,omitempty"`
-	SystemPrompt        string      `json:"systemPrompt,omitempty"`
-	Instructions        string      `json:"instructions,omitempty"`
+	Type                string          `json:"type,omitempty"` // planner, executor, reviewer, router, monitor, retriever
+	Model               ModelSpec       `json:"model"`
+	Role                string          `json:"role,omitempty"`
+	SystemPrompt        string          `json:"systemPrompt,omitempty"`
+	Instructions        string          `json:"instructions,omitempty"`
 	AutonomyLevel       string          `json:"autonomyLevel,omitempty"`
 	ShuHaRi             *ShuHaRiSpec    `json:"shuHaRi,omitempty"`
 	ApprovalPolicy      *ApprovalPolicy `json:"approvalPolicy,omitempty"`
 	ConfidenceThreshold *float64        `json:"confidenceThreshold,omitempty"`
-	Replicas            *int        `json:"replicas,omitempty"`
-	MaxConcurrency      *int        `json:"maxConcurrency,omitempty"`
-	Timeout             string      `json:"timeout,omitempty"`
-	Tools               []ToolSpec  `json:"tools,omitempty"`
-	Memory              *MemorySpec `json:"memory,omitempty"`
-	Runtime             *RuntimeSpec   `json:"runtime,omitempty"`
-	Scaling             *ScalingSpec   `json:"scaling,omitempty"`
-	CredentialsRef      *SecretRef     `json:"credentialsSecretRef,omitempty"`
+	Replicas            *int            `json:"replicas,omitempty"`
+	MaxConcurrency      *int            `json:"maxConcurrency,omitempty"`
+	Timeout             string          `json:"timeout,omitempty"`
+	Tools               []ToolSpec      `json:"tools,omitempty"`
+	Memory              *MemorySpec     `json:"memory,omitempty"`
+	Runtime             *RuntimeSpec    `json:"runtime,omitempty"`
+	Scaling             *ScalingSpec    `json:"scaling,omitempty"`
 	// Free-form fields (complex, schema-flexible structures)
 	Guardrails    *runtime.RawExtension  `json:"guardrails,omitempty"`
 	Observability *runtime.RawExtension  `json:"observability,omitempty"`
@@ -113,23 +112,23 @@ type AgentSpec struct {
 }
 
 type ModelSpec struct {
-	Provider             string     `json:"provider"`
-	Name                 string     `json:"name"`
-	Version              string     `json:"version,omitempty"`
-	Temperature          *float64   `json:"temperature,omitempty"`
-	MaxTokens            *int       `json:"maxTokens,omitempty"`
-	TopP                 *float64   `json:"topP,omitempty"`
-	FrequencyPenalty     *float64   `json:"frequencyPenalty,omitempty"`
-	PresencePenalty      *float64   `json:"presencePenalty,omitempty"`
-	CredentialsSecretRef *SecretRef `json:"credentialsSecretRef,omitempty"`
+	Provider             string                `json:"provider"`
+	Name                 string                `json:"name"`
+	Version              string                `json:"version,omitempty"`
+	Temperature          *float64              `json:"temperature,omitempty"`
+	MaxTokens            *int                  `json:"maxTokens,omitempty"`
+	TopP                 *float64              `json:"topP,omitempty"`
+	FrequencyPenalty     *float64              `json:"frequencyPenalty,omitempty"`
+	PresencePenalty      *float64              `json:"presencePenalty,omitempty"`
+	CredentialsSecretRef *SecretRef            `json:"credentialsSecretRef,omitempty"`
 	Fallback             *runtime.RawExtension `json:"fallback,omitempty"`
 }
 
 type ToolSpec struct {
-	Name                 string        `json:"name"`
-	Type                 string        `json:"type"`
-	Endpoint             *EndpointSpec `json:"endpoint,omitempty"`
-	CredentialsSecretRef *SecretRef    `json:"credentialsSecretRef,omitempty"`
+	Name                 string                `json:"name"`
+	Type                 string                `json:"type"`
+	Endpoint             *EndpointSpec         `json:"endpoint,omitempty"`
+	CredentialsSecretRef *SecretRef            `json:"credentialsSecretRef,omitempty"`
 	Config               *runtime.RawExtension `json:"config,omitempty"`
 }
 
@@ -159,7 +158,7 @@ type RuntimeSpec struct {
 
 type CodeExecutionSpec struct {
 	Enabled      bool         `json:"enabled"`
-	Languages    []string     `json:"languages,omitempty"`    // python, bash
+	Languages    []string     `json:"languages,omitempty"` // python, bash
 	Sandbox      *SandboxSpec `json:"sandbox,omitempty"`
 	Preinstalled []string     `json:"preinstalled,omitempty"` // documentation only
 }
@@ -215,9 +214,9 @@ type ShuHaRiSpec struct {
 
 // ShuHaRiStatus tracks progression in the agent status.
 type ShuHaRiStatus struct {
-	CurrentLevel      string              `json:"currentLevel"`
-	ReadyForPromotion bool                `json:"readyForPromotion"`
-	PromotionProgress *PromotionProgress  `json:"promotionProgress,omitempty"`
+	CurrentLevel      string             `json:"currentLevel"`
+	ReadyForPromotion bool               `json:"readyForPromotion"`
+	PromotionProgress *PromotionProgress `json:"promotionProgress,omitempty"`
 }
 
 type PromotionProgress struct {
@@ -276,9 +275,9 @@ type TransitionCriteria struct {
 }
 
 type RollbackSpec struct {
-	Enabled           bool              `json:"enabled"`
-	TriggerConditions RollbackTriggers  `json:"triggerConditions,omitempty"`
-	RollbackLevel     string            `json:"rollbackLevel,omitempty"` // shu, ha
+	Enabled           bool             `json:"enabled"`
+	TriggerConditions RollbackTriggers `json:"triggerConditions,omitempty"`
+	RollbackLevel     string           `json:"rollbackLevel,omitempty"` // shu, ha
 }
 
 type RollbackTriggers struct {
@@ -328,17 +327,17 @@ type MCPServerList struct {
 }
 
 type MCPServerSpec struct {
-	Image    string   `json:"image"`
-	Port     int      `json:"port,omitempty"`
-	Args     []string `json:"args,omitempty"` // container command args
-	Replicas *int     `json:"replicas,omitempty"`
-	Auth     string   `json:"auth,omitempty"`     // none, bearer
-	SecretRef string  `json:"secretRef,omitempty"` // Secret name for auth token
-	Icon        string   `json:"icon,omitempty"`
-	Category    string   `json:"category,omitempty"`
-	HostNetwork bool     `json:"hostNetwork,omitempty"` // use host networking (minikube/podman)
-	Env         []EnvVar `json:"env,omitempty"`
-	Resources *ResourceRequirements `json:"resources,omitempty"`
+	Image       string                `json:"image"`
+	Port        int                   `json:"port,omitempty"`
+	Args        []string              `json:"args,omitempty"` // container command args
+	Replicas    *int                  `json:"replicas,omitempty"`
+	Auth        string                `json:"auth,omitempty"`      // none, bearer
+	SecretRef   string                `json:"secretRef,omitempty"` // Secret name for auth token
+	Icon        string                `json:"icon,omitempty"`
+	Category    string                `json:"category,omitempty"`
+	HostNetwork bool                  `json:"hostNetwork,omitempty"` // use host networking (minikube/podman)
+	Env         []EnvVar              `json:"env,omitempty"`
+	Resources   *ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ResourceRequirements struct {
@@ -347,11 +346,11 @@ type ResourceRequirements struct {
 }
 
 type MCPServerStatus struct {
-	Phase          string             `json:"phase,omitempty"` // Pending, Ready, Error
-	ToolCount      int                `json:"toolCount,omitempty"`
-	LastDiscovery  *metav1.Time       `json:"lastDiscovery,omitempty"`
-	Message        string             `json:"message,omitempty"`
-	Conditions     []metav1.Condition `json:"conditions,omitempty"`
+	Phase         string             `json:"phase,omitempty"` // Pending, Ready, Error
+	ToolCount     int                `json:"toolCount,omitempty"`
+	LastDiscovery *metav1.Time       `json:"lastDiscovery,omitempty"`
+	Message       string             `json:"message,omitempty"`
+	Conditions    []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func (m *MCPServer) DeepCopyObject() runtime.Object {
@@ -391,12 +390,12 @@ type LLMProviderList struct {
 }
 
 type LLMProviderSpec struct {
-	Type        string            `json:"type"`                  // vertex-ai, anthropic, openai, ollama, custom
-	Endpoint    string            `json:"endpoint,omitempty"`    // custom API endpoint URL
-	APIFormat   string            `json:"apiFormat,omitempty"`   // "anthropic" or "openai" (inferred from type if empty)
-	Model       string            `json:"model"`                 // default model
-	Models      []ModelDefinition `json:"models,omitempty"`      // available models
-	Config      map[string]string `json:"config,omitempty"`      // provider-specific config
+	Type        string            `json:"type"`                // vertex-ai, anthropic, openai, ollama, custom
+	Endpoint    string            `json:"endpoint,omitempty"`  // custom API endpoint URL
+	APIFormat   string            `json:"apiFormat,omitempty"` // "anthropic" or "openai" (inferred from type if empty)
+	Model       string            `json:"model"`               // default model
+	Models      []ModelDefinition `json:"models,omitempty"`    // available models
+	Config      map[string]string `json:"config,omitempty"`    // provider-specific config
 	Credentials *CredentialSpec   `json:"credentials,omitempty"`
 	HealthCheck *HealthCheckSpec  `json:"healthCheck,omitempty"`
 	Fallback    *FallbackSpec     `json:"fallback,omitempty"`
@@ -493,15 +492,15 @@ type WorkflowSpec struct {
 }
 
 type WorkflowStep struct {
-	Name        string           `json:"name"`
-	AgentRef    AgentRef         `json:"agentRef,omitempty"`
-	Type        string           `json:"type,omitempty"`
-	Description string           `json:"description,omitempty"`
-	DependsOn   []string         `json:"dependsOn,omitempty"`
-	InputFrom   []InputRef       `json:"inputFrom,omitempty"`
-	RetryPolicy *RetryPolicySpec `json:"retryPolicy,omitempty"`
-	StepTimeout *StepTimeoutSpec `json:"timeout,omitempty"`
-	ConditionExpr string `json:"condition,omitempty"` // CEL expression for conditional execution
+	Name          string           `json:"name"`
+	AgentRef      AgentRef         `json:"agentRef,omitempty"`
+	Type          string           `json:"type,omitempty"`
+	Description   string           `json:"description,omitempty"`
+	DependsOn     []string         `json:"dependsOn,omitempty"`
+	InputFrom     []InputRef       `json:"inputFrom,omitempty"`
+	RetryPolicy   *RetryPolicySpec `json:"retryPolicy,omitempty"`
+	StepTimeout   *StepTimeoutSpec `json:"timeout,omitempty"`
+	ConditionExpr string           `json:"condition,omitempty"` // CEL expression for conditional execution
 	// Free-form fields
 	Input  *runtime.RawExtension `json:"input,omitempty"`
 	Output *runtime.RawExtension `json:"output,omitempty"`
@@ -578,7 +577,9 @@ type StepStatus struct {
 // ── DeepCopy: Agent ──────────────────────────────────────────────────
 
 func (in *Agent) DeepCopyObject() runtime.Object {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(Agent)
 	in.DeepCopyInto(out)
 	return out
@@ -595,73 +596,143 @@ func (in *Agent) DeepCopyInto(out *Agent) {
 func (in *AgentSpec) DeepCopyInto(out *AgentSpec) {
 	*out = *in
 	in.Model.DeepCopyInto(&out.Model)
-	if in.ConfidenceThreshold != nil { v := *in.ConfidenceThreshold; out.ConfidenceThreshold = &v }
-	if in.Replicas != nil { v := *in.Replicas; out.Replicas = &v }
-	if in.MaxConcurrency != nil { v := *in.MaxConcurrency; out.MaxConcurrency = &v }
+	if in.ConfidenceThreshold != nil {
+		v := *in.ConfidenceThreshold
+		out.ConfidenceThreshold = &v
+	}
+	if in.Replicas != nil {
+		v := *in.Replicas
+		out.Replicas = &v
+	}
+	if in.MaxConcurrency != nil {
+		v := *in.MaxConcurrency
+		out.MaxConcurrency = &v
+	}
 	if in.Tools != nil {
 		out.Tools = make([]ToolSpec, len(in.Tools))
-		for i := range in.Tools { in.Tools[i].DeepCopyInto(&out.Tools[i]) }
+		for i := range in.Tools {
+			in.Tools[i].DeepCopyInto(&out.Tools[i])
+		}
 	}
-	if in.Memory != nil { out.Memory = new(MemorySpec); *out.Memory = *in.Memory }
-	if in.Runtime != nil { out.Runtime = new(RuntimeSpec); in.Runtime.DeepCopyInto(out.Runtime) }
-	if in.Scaling != nil { out.Scaling = new(ScalingSpec); in.Scaling.DeepCopyInto(out.Scaling) }
-	if in.CredentialsRef != nil { out.CredentialsRef = new(SecretRef); *out.CredentialsRef = *in.CredentialsRef }
+	if in.Memory != nil {
+		out.Memory = new(MemorySpec)
+		*out.Memory = *in.Memory
+	}
+	if in.Runtime != nil {
+		out.Runtime = new(RuntimeSpec)
+		in.Runtime.DeepCopyInto(out.Runtime)
+	}
+	if in.Scaling != nil {
+		out.Scaling = new(ScalingSpec)
+		in.Scaling.DeepCopyInto(out.Scaling)
+	}
 }
 
 func (in *ModelSpec) DeepCopyInto(out *ModelSpec) {
 	*out = *in
-	if in.Temperature != nil { v := *in.Temperature; out.Temperature = &v }
-	if in.MaxTokens != nil { v := *in.MaxTokens; out.MaxTokens = &v }
-	if in.TopP != nil { v := *in.TopP; out.TopP = &v }
-	if in.FrequencyPenalty != nil { v := *in.FrequencyPenalty; out.FrequencyPenalty = &v }
-	if in.PresencePenalty != nil { v := *in.PresencePenalty; out.PresencePenalty = &v }
-	if in.CredentialsSecretRef != nil { out.CredentialsSecretRef = new(SecretRef); *out.CredentialsSecretRef = *in.CredentialsSecretRef }
+	if in.Temperature != nil {
+		v := *in.Temperature
+		out.Temperature = &v
+	}
+	if in.MaxTokens != nil {
+		v := *in.MaxTokens
+		out.MaxTokens = &v
+	}
+	if in.TopP != nil {
+		v := *in.TopP
+		out.TopP = &v
+	}
+	if in.FrequencyPenalty != nil {
+		v := *in.FrequencyPenalty
+		out.FrequencyPenalty = &v
+	}
+	if in.PresencePenalty != nil {
+		v := *in.PresencePenalty
+		out.PresencePenalty = &v
+	}
+	if in.CredentialsSecretRef != nil {
+		out.CredentialsSecretRef = new(SecretRef)
+		*out.CredentialsSecretRef = *in.CredentialsSecretRef
+	}
 }
 
 func (in *ToolSpec) DeepCopyInto(out *ToolSpec) {
 	*out = *in
-	if in.Endpoint != nil { out.Endpoint = new(EndpointSpec); in.Endpoint.DeepCopyInto(out.Endpoint) }
-	if in.CredentialsSecretRef != nil { out.CredentialsSecretRef = new(SecretRef); *out.CredentialsSecretRef = *in.CredentialsSecretRef }
+	if in.Endpoint != nil {
+		out.Endpoint = new(EndpointSpec)
+		in.Endpoint.DeepCopyInto(out.Endpoint)
+	}
+	if in.CredentialsSecretRef != nil {
+		out.CredentialsSecretRef = new(SecretRef)
+		*out.CredentialsSecretRef = *in.CredentialsSecretRef
+	}
 }
 
 func (in *EndpointSpec) DeepCopyInto(out *EndpointSpec) {
 	*out = *in
 	if in.Headers != nil {
 		out.Headers = make(map[string]string, len(in.Headers))
-		for k, v := range in.Headers { out.Headers[k] = v }
+		for k, v := range in.Headers {
+			out.Headers[k] = v
+		}
 	}
 }
 
 func (in *RuntimeSpec) DeepCopyInto(out *RuntimeSpec) {
 	*out = *in
-	if in.Env != nil { out.Env = make([]EnvVar, len(in.Env)); copy(out.Env, in.Env) }
+	if in.Env != nil {
+		out.Env = make([]EnvVar, len(in.Env))
+		copy(out.Env, in.Env)
+	}
 }
 
 func (in *ScalingSpec) DeepCopyInto(out *ScalingSpec) {
 	*out = *in
-	if in.MinReplicas != nil { v := *in.MinReplicas; out.MinReplicas = &v }
-	if in.MaxReplicas != nil { v := *in.MaxReplicas; out.MaxReplicas = &v }
-	if in.TargetUtilization != nil { v := *in.TargetUtilization; out.TargetUtilization = &v }
+	if in.MinReplicas != nil {
+		v := *in.MinReplicas
+		out.MinReplicas = &v
+	}
+	if in.MaxReplicas != nil {
+		v := *in.MaxReplicas
+		out.MaxReplicas = &v
+	}
+	if in.TargetUtilization != nil {
+		v := *in.TargetUtilization
+		out.TargetUtilization = &v
+	}
 }
 
 func (in *RetryPolicySpec) DeepCopyInto(out *RetryPolicySpec) {
 	*out = *in
-	if in.RetryOn != nil { out.RetryOn = make([]string, len(in.RetryOn)); copy(out.RetryOn, in.RetryOn) }
+	if in.RetryOn != nil {
+		out.RetryOn = make([]string, len(in.RetryOn))
+		copy(out.RetryOn, in.RetryOn)
+	}
 }
 
 func (in *AgentStatus) DeepCopyInto(out *AgentStatus) {
 	*out = *in
-	if in.StartTime != nil { out.StartTime = in.StartTime.DeepCopy() }
-	if in.CompletionTime != nil { out.CompletionTime = in.CompletionTime.DeepCopy() }
-	if in.LastActiveTime != nil { out.LastActiveTime = in.LastActiveTime.DeepCopy() }
+	if in.StartTime != nil {
+		out.StartTime = in.StartTime.DeepCopy()
+	}
+	if in.CompletionTime != nil {
+		out.CompletionTime = in.CompletionTime.DeepCopy()
+	}
+	if in.LastActiveTime != nil {
+		out.LastActiveTime = in.LastActiveTime.DeepCopy()
+	}
 	if in.Conditions != nil {
 		out.Conditions = make([]metav1.Condition, len(in.Conditions))
-		for i := range in.Conditions { in.Conditions[i].DeepCopyInto(&out.Conditions[i]) }
+		for i := range in.Conditions {
+			in.Conditions[i].DeepCopyInto(&out.Conditions[i])
+		}
 	}
 }
 
 func (in *AgentList) DeepCopyObject() runtime.Object {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(AgentList)
 	in.DeepCopyInto(out)
 	return out
@@ -673,14 +744,18 @@ func (in *AgentList) DeepCopyInto(out *AgentList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		out.Items = make([]Agent, len(in.Items))
-		for i := range in.Items { in.Items[i].DeepCopyInto(&out.Items[i]) }
+		for i := range in.Items {
+			in.Items[i].DeepCopyInto(&out.Items[i])
+		}
 	}
 }
 
 // ── DeepCopy: Workflow ───────────────────────────────────────────────
 
 func (in *Workflow) DeepCopyObject() runtime.Object {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(Workflow)
 	in.DeepCopyInto(out)
 	return out
@@ -698,51 +773,99 @@ func (in *WorkflowSpec) DeepCopyInto(out *WorkflowSpec) {
 	*out = *in
 	if in.Steps != nil {
 		out.Steps = make([]WorkflowStep, len(in.Steps))
-		for i := range in.Steps { in.Steps[i].DeepCopyInto(&out.Steps[i]) }
+		for i := range in.Steps {
+			in.Steps[i].DeepCopyInto(&out.Steps[i])
+		}
 	}
-	if in.Parallelism != nil { v := *in.Parallelism; out.Parallelism = &v }
-	if in.Edges != nil { out.Edges = make([]Edge, len(in.Edges)); copy(out.Edges, in.Edges) }
-	if in.Trigger != nil { out.Trigger = new(TriggerSpec); in.Trigger.DeepCopyInto(out.Trigger) }
-	if in.Concurrency != nil { out.Concurrency = new(ConcurrencySpec); *out.Concurrency = *in.Concurrency }
+	if in.Parallelism != nil {
+		v := *in.Parallelism
+		out.Parallelism = &v
+	}
+	if in.Edges != nil {
+		out.Edges = make([]Edge, len(in.Edges))
+		copy(out.Edges, in.Edges)
+	}
+	if in.Trigger != nil {
+		out.Trigger = new(TriggerSpec)
+		in.Trigger.DeepCopyInto(out.Trigger)
+	}
+	if in.Concurrency != nil {
+		out.Concurrency = new(ConcurrencySpec)
+		*out.Concurrency = *in.Concurrency
+	}
 }
 
 func (in *TriggerSpec) DeepCopyInto(out *TriggerSpec) {
 	*out = *in
-	if in.Schedule != nil { out.Schedule = new(ScheduleTrigger); *out.Schedule = *in.Schedule }
-	if in.Webhook != nil { out.Webhook = new(WebhookTrigger); *out.Webhook = *in.Webhook }
+	if in.Schedule != nil {
+		out.Schedule = new(ScheduleTrigger)
+		*out.Schedule = *in.Schedule
+	}
+	if in.Webhook != nil {
+		out.Webhook = new(WebhookTrigger)
+		*out.Webhook = *in.Webhook
+	}
 }
 
 func (in *WorkflowStep) DeepCopyInto(out *WorkflowStep) {
 	*out = *in
 	out.AgentRef = in.AgentRef
-	if in.DependsOn != nil { out.DependsOn = make([]string, len(in.DependsOn)); copy(out.DependsOn, in.DependsOn) }
-	if in.InputFrom != nil { out.InputFrom = make([]InputRef, len(in.InputFrom)); copy(out.InputFrom, in.InputFrom) }
-	if in.RetryPolicy != nil { out.RetryPolicy = new(RetryPolicySpec); in.RetryPolicy.DeepCopyInto(out.RetryPolicy) }
-	if in.StepTimeout != nil { out.StepTimeout = new(StepTimeoutSpec); *out.StepTimeout = *in.StepTimeout }
+	if in.DependsOn != nil {
+		out.DependsOn = make([]string, len(in.DependsOn))
+		copy(out.DependsOn, in.DependsOn)
+	}
+	if in.InputFrom != nil {
+		out.InputFrom = make([]InputRef, len(in.InputFrom))
+		copy(out.InputFrom, in.InputFrom)
+	}
+	if in.RetryPolicy != nil {
+		out.RetryPolicy = new(RetryPolicySpec)
+		in.RetryPolicy.DeepCopyInto(out.RetryPolicy)
+	}
+	if in.StepTimeout != nil {
+		out.StepTimeout = new(StepTimeoutSpec)
+		*out.StepTimeout = *in.StepTimeout
+	}
 }
 
 func (in *WorkflowStatus) DeepCopyInto(out *WorkflowStatus) {
 	*out = *in
-	if in.StartTime != nil { out.StartTime = in.StartTime.DeepCopy() }
-	if in.CompletionTime != nil { out.CompletionTime = in.CompletionTime.DeepCopy() }
-	if in.LastTriggerTime != nil { out.LastTriggerTime = in.LastTriggerTime.DeepCopy() }
-	if in.NextRunTime != nil { out.NextRunTime = in.NextRunTime.DeepCopy() }
+	if in.StartTime != nil {
+		out.StartTime = in.StartTime.DeepCopy()
+	}
+	if in.CompletionTime != nil {
+		out.CompletionTime = in.CompletionTime.DeepCopy()
+	}
+	if in.LastTriggerTime != nil {
+		out.LastTriggerTime = in.LastTriggerTime.DeepCopy()
+	}
+	if in.NextRunTime != nil {
+		out.NextRunTime = in.NextRunTime.DeepCopy()
+	}
 	if in.StepStatuses != nil {
 		out.StepStatuses = make([]StepStatus, len(in.StepStatuses))
 		for i := range in.StepStatuses {
 			out.StepStatuses[i] = in.StepStatuses[i]
-			if in.StepStatuses[i].StartTime != nil { out.StepStatuses[i].StartTime = in.StepStatuses[i].StartTime.DeepCopy() }
-			if in.StepStatuses[i].CompletionTime != nil { out.StepStatuses[i].CompletionTime = in.StepStatuses[i].CompletionTime.DeepCopy() }
+			if in.StepStatuses[i].StartTime != nil {
+				out.StepStatuses[i].StartTime = in.StepStatuses[i].StartTime.DeepCopy()
+			}
+			if in.StepStatuses[i].CompletionTime != nil {
+				out.StepStatuses[i].CompletionTime = in.StepStatuses[i].CompletionTime.DeepCopy()
+			}
 		}
 	}
 	if in.Conditions != nil {
 		out.Conditions = make([]metav1.Condition, len(in.Conditions))
-		for i := range in.Conditions { in.Conditions[i].DeepCopyInto(&out.Conditions[i]) }
+		for i := range in.Conditions {
+			in.Conditions[i].DeepCopyInto(&out.Conditions[i])
+		}
 	}
 }
 
 func (in *WorkflowList) DeepCopyObject() runtime.Object {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(WorkflowList)
 	in.DeepCopyInto(out)
 	return out
@@ -754,6 +877,8 @@ func (in *WorkflowList) DeepCopyInto(out *WorkflowList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		out.Items = make([]Workflow, len(in.Items))
-		for i := range in.Items { in.Items[i].DeepCopyInto(&out.Items[i]) }
+		for i := range in.Items {
+			in.Items[i].DeepCopyInto(&out.Items[i])
+		}
 	}
 }
