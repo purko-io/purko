@@ -16,7 +16,7 @@
         <link rel="prev" href="../..">
       
       
-        <link rel="next" href="../first-agent/">
+        <link rel="next" href="../production/">
       
       
         
@@ -414,15 +414,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-1-install-the-helm-chart" class="md-nav__link">
+  <a href="#step-1-install-the-crds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1 — Install the Helm chart
+        Step 1 — Install the CRDs
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Step 1 — Install the Helm chart">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-install-the-helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Install the Helm chart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 2 — Install the Helm chart">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -442,10 +453,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-verify-the-operator-is-running" class="md-nav__link">
+  <a href="#step-3-verify-the-operator-is-running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2 — Verify the operator is running
+        Step 3 — Verify the operator is running
       
     </span>
   </a>
@@ -464,10 +475,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-install-purkoctl" class="md-nav__link">
+  <a href="#step-5-install-purkoctl" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4 — Install purkoctl
+        Step 5 — Install purkoctl
       
     </span>
   </a>
@@ -500,6 +511,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1062,6 +1101,34 @@
     
   
     Intent Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
   
 
     
@@ -1924,15 +1991,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-1-install-the-helm-chart" class="md-nav__link">
+  <a href="#step-1-install-the-crds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1 — Install the Helm chart
+        Step 1 — Install the CRDs
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Step 1 — Install the Helm chart">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-install-the-helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — Install the Helm chart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 2 — Install the Helm chart">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1952,10 +2030,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-verify-the-operator-is-running" class="md-nav__link">
+  <a href="#step-3-verify-the-operator-is-running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2 — Verify the operator is running
+        Step 3 — Verify the operator is running
       
     </span>
   </a>
@@ -1974,10 +2052,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-install-purkoctl" class="md-nav__link">
+  <a href="#step-5-install-purkoctl" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4 — Install purkoctl
+        Step 5 — Install purkoctl
       
     </span>
   </a>
@@ -2069,19 +2147,33 @@
 <p>If you use the <code>podman</code> driver, you will also need to enable <code>hostNetwork</code> for the operator (covered below).</p>
 </div>
 <hr />
-<h2 id="step-1-install-the-helm-chart">Step 1 — Install the Helm chart<a class="headerlink" href="#step-1-install-the-helm-chart" title="Permanent link">&para;</a></h2>
-<p>Clone the repository and install from the local chart:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/geored/purko.git
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>purko
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span>--create-namespace<span class="w"> </span>--namespace<span class="w"> </span>purko-system
+<h2 id="step-1-install-the-crds">Step 1 — Install the CRDs<a class="headerlink" href="#step-1-install-the-crds" title="Permanent link">&para;</a></h2>
+<p>The CRDs are installed separately from the chart so their lifecycle is
+explicit (Helm does not upgrade CRDs on <code>helm upgrade</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;https://github.com/purko-io/purko/crds?ref=main&quot;</span>
+</code></pre></div>
+<p>Or, from a clone: <code>kubectl apply -f crds/</code>.</p>
+<h2 id="step-2-install-the-helm-chart">Step 2 — Install the Helm chart<a class="headerlink" href="#step-2-install-the-helm-chart" title="Permanent link">&para;</a></h2>
+<p><strong>Option A — OCI registry (no clone needed):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>oci://ghcr.io/purko-io/purko<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--namespace<span class="w"> </span>purko-system<span class="w"> </span>--create-namespace
+</code></pre></div>
+<p>The OCI chart bundles the CRDs from <code>v0.2.1</code> onward (Helm installs a
+chart's <code>crds/</code> on first install, but never upgrades them — Step 1 remains
+the way to upgrade CRDs).</p>
+<p><strong>Option B — from source:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/purko-io/purko.git
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>purko
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span>--create-namespace<span class="w"> </span>--namespace<span class="w"> </span>purko-system
 </code></pre></div>
 <p>The chart installs:</p>
 <ul>
-<li>The <code>Agent</code>, <code>Workflow</code>, <code>MCPServer</code>, <code>LLMProvider</code>, and <code>AgentAutonomyPolicy</code> CRDs</li>
 <li>The Purko operator Deployment in <code>purko-system</code></li>
 <li>RBAC (ServiceAccount, ClusterRole, ClusterRoleBinding)</li>
 <li>A dashboard Service on port 8082</li>
-<li>The <code>ai-agents</code> namespace for your Agent and Workflow resources</li>
+<li>The starter agent library and the <code>ai-agents</code> namespace for your Agent
+  and Workflow resources</li>
+<li>The execution history PVC (<code>operator.history.enabled</code>)</li>
 </ul>
 <h3 id="key-values">Key values<a class="headerlink" href="#key-values" title="Permanent link">&para;</a></h3>
 <p>The chart is configured through <code>deploy/helm/values.yaml</code>. The most commonly changed values:</p>
@@ -2122,53 +2214,62 @@
 </tbody>
 </table>
 <p>Override values at install time:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--namespace<span class="w"> </span>purko-system<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--set<span class="w"> </span>llm.provider<span class="o">=</span>anthropic<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--set<span class="w"> </span>llm.credentials.secretName<span class="o">=</span>anthropic-api-key
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--namespace<span class="w"> </span>purko-system<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--set<span class="w"> </span>llm.provider<span class="o">=</span>anthropic<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--set<span class="w"> </span>llm.credentials.secretName<span class="o">=</span>anthropic-api-key
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">minikube / podman networking</p>
 <p>Pod-to-pod networking does not work correctly with the <code>podman</code> driver by default. Enable <code>hostNetwork</code> so the operator and MCP servers bind to the host network:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--namespace<span class="w"> </span>purko-system<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--set<span class="w"> </span>operator.hostNetwork<span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>install<span class="w"> </span>purko<span class="w"> </span>deploy/helm/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--namespace<span class="w"> </span>purko-system<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--set<span class="w"> </span>operator.hostNetwork<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p>When <code>hostNetwork: true</code> is set, MCP servers are also registered as <code>localhost:&lt;port&gt;</code> instead of their ClusterIP address.</p>
 </div>
 <hr />
-<h2 id="step-2-verify-the-operator-is-running">Step 2 — Verify the operator is running<a class="headerlink" href="#step-2-verify-the-operator-is-running" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>purko-system
+<h2 id="step-3-verify-the-operator-is-running">Step 3 — Verify the operator is running<a class="headerlink" href="#step-3-verify-the-operator-is-running" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>purko-system
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>NAME                               READY   STATUS    RESTARTS   AGE
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>purko-operator-xxxxx-yyyyy         1/1     Running   0          30s
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>NAME                               READY   STATUS    RESTARTS   AGE
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>purko-operator-xxxxx-yyyyy         1/1     Running   0          30s
 </code></pre></div>
 <p>Check that the CRDs were installed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>agents.purko.io                     2026-04-23T09:00:00Z
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>agentautonomypolicies.purko.io      2026-04-23T09:00:00Z
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>llmproviders.purko.io               2026-04-23T09:00:00Z
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>mcpservers.purko.io                 2026-04-23T09:00:00Z
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>workflows.purko.io                  2026-04-23T09:00:00Z
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>agents.purko.io                     2026-04-23T09:00:00Z
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>agentautonomypolicies.purko.io      2026-04-23T09:00:00Z
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>llmproviders.purko.io               2026-04-23T09:00:00Z
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>mcpservers.purko.io                 2026-04-23T09:00:00Z
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>workflows.purko.io                  2026-04-23T09:00:00Z
 </code></pre></div>
 <p>Check that the API resources are registered (note the short names):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>api-resources<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>api-resources<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>agents                ag    purko.io/v1alpha1    true    Agent
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>workflows             wf    purko.io/v1alpha1    true    Workflow
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>mcpservers            mcp   purko.io/v1alpha1    true    MCPServer
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>llmproviders          llm   purko.io/v1alpha1    true    LLMProvider
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>agents                ag    purko.io/v1alpha1    true    Agent
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>workflows             wf    purko.io/v1alpha1    true    Workflow
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>mcpservers            mcp   purko.io/v1alpha1    true    MCPServer
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>llmproviders          llm   purko.io/v1alpha1    true    LLMProvider
 </code></pre></div>
 <p>The short names (<code>ag</code>, <code>wf</code>, <code>mcp</code>, <code>llm</code>) can be used anywhere you would type the full resource name.</p>
+<p>The chart also installs the <strong>starter agent library</strong> — six archetype agents
+(task-router, project-planner, code-executor, code-reviewer, system-monitor,
+knowledge-retriever) so the dashboard has a working agent set immediately:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>agents<span class="w"> </span>-n<span class="w"> </span>ai-agents
+</code></pre></div>
+<p>Their model provider/name come from <code>starterAgents.provider</code> and
+<code>starterAgents.model</code> in the Helm values (the provider name resolves against
+your LLMProvider resources, falling back to the one marked <code>default: true</code>).
+Set <code>starterAgents.enabled: false</code> if you manage agents yourself.</p>
 <hr />
 <h2 id="step-3-access-the-dashboard-pro">Step 3 — Access the Dashboard (Pro)<a class="headerlink" href="#step-3-access-the-dashboard-pro" title="Permanent link">&para;</a></h2>
 <p>The Purko dashboard is available in Purko Pro. It provides a UI for creating agents, monitoring workflows, and browsing MCP tool catalogs. Community edition users manage everything via purkoctl CLI and kubectl.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>purko-system<span class="w"> </span>deploy/purko-operator<span class="w"> </span><span class="m">8082</span>:8082
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>purko-system<span class="w"> </span>deploy/purko-operator<span class="w"> </span><span class="m">8082</span>:8082
 </code></pre></div>
 <p>Then open <a href="http://localhost:8082">http://localhost:8082</a> in your browser.</p>
 <div class="admonition tip">
@@ -2177,39 +2278,39 @@
 </div>
 <p>The dashboard also exposes a REST API at <code>http://localhost:8082/api/</code>. The CLI (<code>purkoctl</code>) uses this API internally.</p>
 <hr />
-<h2 id="step-4-install-purkoctl">Step 4 — Install purkoctl<a class="headerlink" href="#step-4-install-purkoctl" title="Permanent link">&para;</a></h2>
+<h2 id="step-5-install-purkoctl">Step 5 — Install purkoctl<a class="headerlink" href="#step-5-install-purkoctl" title="Permanent link">&para;</a></h2>
 <p><code>purkoctl</code> is a CLI for managing agents, workflows, and MCP servers from the terminal. Build it from source:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># From the repository root</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>go<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>-ldflags<span class="w"> </span><span class="s2">&quot;-X main.version=</span><span class="k">$(</span>git<span class="w"> </span>describe<span class="w"> </span>--tags<span class="w"> </span>--always<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>-o<span class="w"> </span>bin/purkoctl<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>./cmd/purkoctl/
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># From the repository root</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>go<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-ldflags<span class="w"> </span><span class="s2">&quot;-X main.version=</span><span class="k">$(</span>git<span class="w"> </span>describe<span class="w"> </span>--tags<span class="w"> </span>--always<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>-o<span class="w"> </span>bin/purkoctl<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span>./cmd/purkoctl/
 </code></pre></div>
 <p>Move the binary to a directory on your <code>PATH</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mv<span class="w"> </span>bin/purkoctl<span class="w"> </span>/usr/local/bin/purkoctl
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>mv<span class="w"> </span>bin/purkoctl<span class="w"> </span>/usr/local/bin/purkoctl
 </code></pre></div>
 <p>Verify the installation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>purkoctl<span class="w"> </span>version
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>purkoctl<span class="w"> </span>version
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>purkoctl v0.1.0-alpha (build: abc1234)
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>API: http://localhost:8082
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>purkoctl v0.1.0-alpha (build: abc1234)
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>API: http://localhost:8082
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p><code>purkoctl</code> defaults to <code>http://localhost:8082</code> as the API endpoint. If you change the dashboard port or run it on a remote cluster, set the <code>PURKO_API</code> environment variable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PURKO_API</span><span class="o">=</span>http://my-cluster:8082
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PURKO_API</span><span class="o">=</span>http://my-cluster:8082
 </code></pre></div>
 </div>
 <hr />
 <h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
 <p>Remove all agent and workflow resources before uninstalling, or their finalizers will block deletion:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>agents,workflows<span class="w"> </span>--all<span class="w"> </span>-A
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>purko<span class="w"> </span>--namespace<span class="w"> </span>purko-system
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>purko-system
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>agents,workflows<span class="w"> </span>--all<span class="w"> </span>-A
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>purko<span class="w"> </span>--namespace<span class="w"> </span>purko-system
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>purko-system
 </code></pre></div>
 <p>To remove the CRDs as well (this deletes all stored Agent and Workflow data):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>crd
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>purko<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>crd
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

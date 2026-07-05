@@ -371,6 +371,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/first-agent/" class="md-nav__link">
         
   
@@ -921,6 +949,34 @@
     
   
     Intent Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
   
 
     
@@ -1552,6 +1608,17 @@
     <span class="md-ellipsis">
       
         System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution History
       
     </span>
   </a>
@@ -2216,6 +2283,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#execution-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution History
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2698,6 +2776,13 @@
 </tr>
 </tbody>
 </table>
+<h3 id="execution-history">Execution History<a class="headerlink" href="#execution-history" title="Permanent link">&para;</a></h3>
+<p>Read-only endpoints backed by the SQLite history archive. Unlike
+<code>/api/workflow/{name}</code> (live Kubernetes state), these return persisted
+records that survive pod garbage collection and workflow deletion.
+They return <code>503</code> when history is disabled (<code>operator.history.enabled: false</code>).</p>
+<p>| Method | Path | Description |
+|</p>
 <hr />
 <h2 id="endpoint-reference">Endpoint Reference<a class="headerlink" href="#endpoint-reference" title="Permanent link">&para;</a></h2>
 <h3 id="get-apioverview">GET /api/overview<a class="headerlink" href="#get-apioverview" title="Permanent link">&para;</a></h3>

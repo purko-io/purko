@@ -371,6 +371,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/first-agent/" class="md-nav__link">
         
   
@@ -934,6 +962,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1469,6 +1525,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credential-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential References
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2251,6 +2318,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credential-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential References
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3075,6 +3153,34 @@
 </tr>
 </tbody>
 </table>
+<h2 id="credential-references">Credential References<a class="headerlink" href="#credential-references" title="Permanent link">&para;</a></h2>
+<p>There are two credential reference points, for two different things:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Credential for</th>
+<th>Consumed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spec.model.credentialsSecretRef</code></td>
+<td>The LLM provider API key</td>
+<td>Passed to the executor as <code>MODEL_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>spec.tools[].credentialsSecretRef</code></td>
+<td>A specific tool's endpoint</td>
+<td>Passed to the tool's MCP client</td>
+</tr>
+</tbody>
+</table>
+<p>Both reference a Secret in the agent's namespace (<code>name</code> + optional <code>key</code>,
+default <code>api-key</code>). There is no agent-level credential field. When the
+agent's provider resolves to an <code>LLMProvider</code> resource, credentials from
+that provider's <code>spec.credentials</code> take precedence — prefer configuring
+credentials once on the LLMProvider over per-agent secrets.</p>
 <h2 id="status-fields">Status Fields<a class="headerlink" href="#status-fields" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

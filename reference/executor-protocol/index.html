@@ -371,6 +371,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/first-agent/" class="md-nav__link">
         
   
@@ -921,6 +949,34 @@
     
   
     Intent Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
   
 
     
@@ -2170,6 +2226,30 @@
 <td><code>0.2</code></td>
 </tr>
 <tr>
+<td><code>MODEL_MAX_TOKENS</code></td>
+<td>Agent <code>spec.model.maxTokens</code></td>
+<td>No</td>
+<td><code>4096</code> (default when unset)</td>
+</tr>
+<tr>
+<td><code>MODEL_TIMEOUT</code></td>
+<td>Operator env (seconds per model API call)</td>
+<td>No</td>
+<td><code>120</code> (default when unset)</td>
+</tr>
+<tr>
+<td><code>MODEL_ENDPOINT</code></td>
+<td>LLMProvider <code>spec.endpoint</code></td>
+<td>No</td>
+<td><code>http://ollama.ai-agents:11434/v1</code></td>
+</tr>
+<tr>
+<td><code>MODEL_API_FORMAT</code></td>
+<td>LLMProvider <code>spec.apiFormat</code></td>
+<td>No</td>
+<td><code>openai</code></td>
+</tr>
+<tr>
 <td><code>AGENT_SYSTEM_PROMPT</code></td>
 <td>Agent <code>spec.systemPrompt</code></td>
 <td>No</td>
@@ -2322,6 +2402,9 @@
 </tbody>
 </table>
 <p>When a step exits non-zero and <code>retryPolicy</code> is configured, the controller retries up to <code>maxRetries</code> times before marking the step as <code>Failed</code>.</p>
+<p>The default executor exits <code>1</code> when its output contains only an <code>error</code>
+field (e.g. the model API timed out or returned an error) — a failed model
+call must fail the Job rather than being archived as a successful step.</p>
 <h2 id="volume-mounts">Volume Mounts<a class="headerlink" href="#volume-mounts" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

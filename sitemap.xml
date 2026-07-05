@@ -2,154 +2,162 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://purko-io.github.io/purko/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/architecture/controllers/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/architecture/overview/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/architecture/security/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/community/changelog/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/community/contributing/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/community/roadmap/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/agents/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/llm-providers/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/mcp-servers/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/memory/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/shu-ha-ri/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/tool-types/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/concepts/workflows/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/getting-started/connect-mcp/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/getting-started/first-agent/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/getting-started/first-workflow/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/getting-started/installation/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
+    </url>
+    <url>
+         <loc>https://purko-io.github.io/purko/getting-started/production/</loc>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/building-agents/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/building-workflows/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/custom-executor/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
+    </url>
+    <url>
+         <loc>https://purko-io.github.io/purko/guides/execution-history/</loc>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/industry-templates/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/intent-bar/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/guides/sdlc-workflow/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/api-endpoints/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/cli-reference/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/crd-agent/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/crd-autonomypolicy/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/crd-llmprovider/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/crd-mcpserver/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/crd-workflow/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/reference/executor-protocol/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/data-analytics/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/digital-agency/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/legal-compliance/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/overview/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/real-estate/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
     <url>
          <loc>https://purko-io.github.io/purko/showcases/video-production/</loc>
-         <lastmod>2026-06-09</lastmod>
+         <lastmod>2026-07-05</lastmod>
     </url>
 </urlset>

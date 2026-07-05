@@ -371,6 +371,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/first-agent/" class="md-nav__link">
         
   
@@ -921,6 +949,34 @@
     
   
     Intent Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
   
 
     
@@ -1826,6 +1882,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#admission-webhook-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admission Webhook TLS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#network-considerations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2240,6 +2307,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#admission-webhook-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Admission Webhook TLS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#network-considerations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2528,6 +2606,26 @@
 </code></pre></div>
 <p>The job builder injects the secret value as <code>MODEL_API_KEY</code> using a <code>secretKeyRef</code> env var — the value is never written to a ConfigMap or pod spec field as a plain string. The operator itself only reads secrets; it does not create or modify them.</p>
 <p>For Vertex AI, a GCP service account JSON key is stored in a Secret and mounted as a file at <code>/var/run/secrets/gcp/credentials.json</code>. The executor reads this path via the standard <code>GOOGLE_APPLICATION_CREDENTIALS</code> environment variable.</p>
+<hr />
+<h2 id="admission-webhook-tls">Admission Webhook TLS<a class="headerlink" href="#admission-webhook-tls" title="Permanent link">&para;</a></h2>
+<p>With <code>webhooks.enabled: true</code>, the chart deploys validating webhooks for
+Agents and Workflows. Webhook TLS is provisioned one of two ways:</p>
+<ul>
+<li><strong>Chart-generated certificates (default):</strong> Helm generates a CA and serving
+  certificate at install time (<code>genCA</code>/<code>genSignedCert</code>), stores them in the
+  <code>purko-webhook-server-cert</code> Secret, and injects the CA into the
+  <code>ValidatingWebhookConfiguration</code> <code>caBundle</code>. Existing certificates are
+  reused on upgrade (via <code>lookup</code>), so they are not rotated on every
+  <code>helm upgrade</code>.</li>
+<li><strong>cert-manager (<code>webhooks.certManager.enabled: true</code>):</strong> the chart creates
+  a self-signed Issuer and Certificate instead, and cert-manager's CA
+  injector maintains the <code>caBundle</code>. Use this in production clusters that
+  already run cert-manager.</li>
+</ul>
+<p>The serving certificate is mounted read-only at
+<code>/tmp/k8s-webhook-server/serving-certs</code>, where controller-runtime's webhook
+server expects it. All webhooks use <code>failurePolicy: Fail</code> — invalid resources
+are rejected even if the operator is briefly unavailable.</p>
 <hr />
 <h2 id="network-considerations">Network Considerations<a class="headerlink" href="#network-considerations" title="Permanent link">&para;</a></h2>
 <p>MCP servers run as ClusterIP services in production. The executor pods connect to them via DNS (<code>http://{service}.{namespace}.svc.cluster.local:{port}</code>). No external ingress is required for MCP communication.</p>

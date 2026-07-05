@@ -371,6 +371,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting-started/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting-started/first-agent/" class="md-nav__link">
         
   
@@ -921,6 +949,34 @@
     
   
     Intent Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execution-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution History
   
 
     
@@ -2484,6 +2540,14 @@
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">agentRef vs type</p>
+<p><code>agentRef</code> is optional <strong>only when the step sets <code>type</code></strong> (a built-in
+step kind). Every step must have one or the other — the validating
+webhook rejects steps with neither (<code>step must have either
+agentRef.name or type</code>). A step with <code>agentRef</code> runs that agent in an
+executor Job; a step with <code>type</code> runs built-in behavior.</p>
+</div>
 <h3 id="agentref">AgentRef<a class="headerlink" href="#agentref" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
