@@ -30,11 +30,17 @@ By the time your agent finishes the listing appointment, the market analysis, li
 ## Screenshots
 
 
+![Agents List](../showcase-assets/real-estate/screenshots/01-agents-list.png)
+
 The agents list shows all four real estate agents with their types, temperature settings, and autonomy levels.
 
 
+![Listing Writer Detail](../showcase-assets/real-estate/screenshots/02-listing-writer-detail.png)
+
 The listing-writer detail shows temperature 0.8, supervised autonomy, and the system prompt rules including Fair Housing Act compliance.
 
+
+![Listing to Close Workflow](../showcase-assets/real-estate/screenshots/03-listing-to-close-workflow.png)
 
 The workflow DAG shows market analysis gating the parallel listing creation and buyer matching steps.
 

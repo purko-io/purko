@@ -44,7 +44,7 @@ helm install purko oci://ghcr.io/purko-io/purko \
   --namespace purko-system --create-namespace
 ```
 
-The OCI chart bundles the CRDs from `v0.2.0` onward (Helm installs a
+The OCI chart bundles the CRDs from `v0.2.1` onward (Helm installs a
 chart's `crds/` on first install, but never upgrades them — Step 1 remains
 the way to upgrade CRDs).
 

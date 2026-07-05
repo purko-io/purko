@@ -32,11 +32,17 @@ The three content-writing steps run in parallel, which is why the full pipeline 
 ## Screenshots
 
 
+![Dashboard Overview](../showcase-assets/digital-agency/screenshots/01-overview.png)
+
 The dashboard overview shows the platform summary: agents, workflows, MCP servers, and the Shu-Ha-Ri trust distribution.
 
 
+![Campaign Strategist Detail](../showcase-assets/digital-agency/screenshots/03-strategist-detail.png)
+
 The agent detail view shows type, model, autonomy level, memory configuration, guardrails, and the Shu-Ha-Ri trust tracker.
 
+
+![Workflow Execution DAG](../showcase-assets/digital-agency/screenshots/07-workflow-detail.png)
 
 The workflow detail shows the execution DAG with parallel branches, step statuses, and outputs.
 

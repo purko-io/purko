@@ -30,11 +30,17 @@ A contract review that takes a junior associate 4-6 hours produces a structured 
 ## Screenshots
 
 
+![Agents List](../showcase-assets/legal-compliance/screenshots/01-agents-list.png)
+
 The agents list shows all four legal agents with their types, autonomy levels, and current status.
 
 
+![Contract Analyst Detail](../showcase-assets/legal-compliance/screenshots/02-contract-analyst-detail.png)
+
 The contract-analyst detail shows supervised autonomy, low temperature (0.2) for precision, and the Shu-Ha-Ri trust tracker.
 
+
+![Contract Review Workflow](../showcase-assets/legal-compliance/screenshots/03-contract-review-workflow.png)
 
 The workflow DAG shows the parallel regulatory check and due diligence steps before the final report compilation.
 
