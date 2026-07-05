@@ -1,8 +1,14 @@
 {{- /*
-  Both namespaces carry helm.sh/resource-policy: keep (purko-io/purko#6):
-  - uninstall/upgrade never deletes them (previously `helm uninstall`
-    deleted purko-system and ai-agents with all user resources in them)
-  - coexists safely with `helm install --create-namespace`
+  Namespace lifecycle (purko-io/purko#6, #20 review):
+  - helm.sh/resource-policy: keep — uninstall/upgrade never deletes the
+    namespaces (previously `helm uninstall` deleted purko-system and
+    ai-agents with every user resource inside).
+  - Helm ownership metadata is pre-stamped so kept namespaces are adopted
+    cleanly on uninstall -> reinstall with the same release name, and so
+    namespaces pre-created by `--create-namespace` or an aborted install
+    do not block installation with "cannot be imported" errors.
+  Reinstalling under a DIFFERENT release name over kept namespaces still
+  fails by design (ambiguous ownership) — delete or re-annotate them first.
 */}}
 apiVersion: v1
 kind: Namespace
@@ -10,8 +16,11 @@ metadata:
   name: {{ .Values.namespace }}
   labels:
     app.kubernetes.io/part-of: purko
+    app.kubernetes.io/managed-by: Helm
   annotations:
     helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
 ---
 apiVersion: v1
 kind: Namespace
@@ -19,5 +28,8 @@ metadata:
   name: {{ .Values.agentNamespace }}
   labels:
     app.kubernetes.io/part-of: purko
+    app.kubernetes.io/managed-by: Helm
   annotations:
     helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}

@@ -113,3 +113,16 @@ will block namespace deletion:
 kubectl delete agents,workflows --all -A
 helm uninstall purko -n purko-system
 ```
+
+The `purko-system` and `ai-agents` namespaces are intentionally **kept** on
+uninstall (`helm.sh/resource-policy: keep`). Reinstalling with the same
+release name adopts them cleanly; reinstalling under a **different** release
+name fails with an ownership error — delete the namespaces or re-annotate
+`meta.helm.sh/release-name` first.
+
+!!! note "CRD upgrades on Kubernetes 1.27–1.29"
+    From v0.2.2 the Agent CRD validates `shuHaRi` and `approvalPolicy` with
+    enums that were previously unvalidated. Kubernetes ≥ 1.30 ratchets
+    validation (existing unchanged values are tolerated); on 1.27–1.29,
+    verify no Agent carries out-of-enum values in those fields before
+    applying the new CRDs.
