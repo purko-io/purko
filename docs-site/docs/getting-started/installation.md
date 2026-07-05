@@ -24,9 +24,31 @@ For local development, [minikube](https://minikube.sigs.k8s.io/) is the recommen
 
 ---
 
-## Step 1 — Install the Helm chart
+## Step 1 — Install the CRDs
 
-Clone the repository and install from the local chart:
+The CRDs are installed separately from the chart so their lifecycle is
+explicit (Helm does not upgrade CRDs on `helm upgrade`):
+
+```bash
+kubectl apply -k "https://github.com/purko-io/purko/crds?ref=main"
+```
+
+Or, from a clone: `kubectl apply -f crds/`.
+
+## Step 2 — Install the Helm chart
+
+**Option A — OCI registry (no clone needed):**
+
+```bash
+helm install purko oci://ghcr.io/purko-io/purko \
+  --namespace purko-system --create-namespace
+```
+
+The OCI chart bundles the CRDs from `v0.2.0` onward (Helm installs a
+chart's `crds/` on first install, but never upgrades them — Step 1 remains
+the way to upgrade CRDs).
+
+**Option B — from source:**
 
 ```bash
 git clone https://github.com/purko-io/purko.git
@@ -36,11 +58,12 @@ helm install purko deploy/helm/ --create-namespace --namespace purko-system
 
 The chart installs:
 
-- The `Agent`, `Workflow`, `MCPServer`, `LLMProvider`, and `AgentAutonomyPolicy` CRDs
 - The Purko operator Deployment in `purko-system`
 - RBAC (ServiceAccount, ClusterRole, ClusterRoleBinding)
 - A dashboard Service on port 8082
-- The `ai-agents` namespace for your Agent and Workflow resources
+- The starter agent library and the `ai-agents` namespace for your Agent
+  and Workflow resources
+- The execution history PVC (`operator.history.enabled`)
 
 ### Key values
 
@@ -78,7 +101,7 @@ helm install purko deploy/helm/ \
 
 ---
 
-## Step 2 — Verify the operator is running
+## Step 3 — Verify the operator is running
 
 ```bash
 kubectl get pods -n purko-system
@@ -154,7 +177,7 @@ The dashboard also exposes a REST API at `http://localhost:8082/api/`. The CLI (
 
 ---
 
-## Step 4 — Install purkoctl
+## Step 5 — Install purkoctl
 
 `purkoctl` is a CLI for managing agents, workflows, and MCP servers from the terminal. Build it from source:
 

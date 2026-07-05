@@ -1,0 +1,10 @@
+# Enables one-line remote CRD install/upgrade:
+#   kubectl apply -k "https://github.com/purko-io/purko/crds?ref=main"
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - agent.crd.yaml
+  - workflow.crd.yaml
+  - mcpserver.crd.yaml
+  - llmprovider.crd.yaml
+  - autonomypolicy.crd.yaml

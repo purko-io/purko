@@ -90,6 +90,14 @@ spec:
 | `output` | object | No | Free-form output schema or transformation spec |
 | `config` | object | No | Free-form step-level config |
 
+!!! note "agentRef vs type"
+    `agentRef` is optional **only when the step sets `type`** (a built-in
+    step kind). Every step must have one or the other — the validating
+    webhook rejects steps with neither (`step must have either
+    agentRef.name or type`). A step with `agentRef` runs that agent in an
+    executor Job; a step with `type` runs built-in behavior.
+
+
 ### AgentRef
 
 | Field | Type | Required | Description |
