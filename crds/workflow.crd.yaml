@@ -340,9 +340,6 @@ spec:
                 description: Input parameters for variable substitution in step inputs.
                 additionalProperties:
                   type: string
-              schedule:
-                type: string
-                description: Cron schedule for recurring workflows.
               hooks:
                 type: object
                 description: Lifecycle hooks for workflow events.

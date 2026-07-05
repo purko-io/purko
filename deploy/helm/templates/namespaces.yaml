@@ -1,9 +1,17 @@
+{{- /*
+  Both namespaces carry helm.sh/resource-policy: keep (purko-io/purko#6):
+  - uninstall/upgrade never deletes them (previously `helm uninstall`
+    deleted purko-system and ai-agents with all user resources in them)
+  - coexists safely with `helm install --create-namespace`
+*/}}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.namespace }}
   labels:
     app.kubernetes.io/part-of: purko
+  annotations:
+    helm.sh/resource-policy: keep
 ---
 apiVersion: v1
 kind: Namespace
@@ -11,3 +19,5 @@ metadata:
   name: {{ .Values.agentNamespace }}
   labels:
     app.kubernetes.io/part-of: purko
+  annotations:
+    helm.sh/resource-policy: keep

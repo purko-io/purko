@@ -126,9 +126,41 @@ jobs:
       - name: Push to GHCR
         run: helm push purko-*.tgz oci://ghcr.io/purko-io
 
+  build-purkoctl:
+    name: Build purkoctl binaries
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          for os in Linux Darwin; do
+            for arch in amd64 arm64; do
+              GOOS=$(echo $os | tr '[:upper:]' '[:lower:]') GOARCH=$arch CGO_ENABLED=0 \
+                go build -ldflags "-X main.version=${{ steps.version.outputs.VERSION }}" \
+                -o dist/purkoctl-$os-$([ $arch = amd64 ] && echo x86_64 || echo arm64) ./cmd/purkoctl/
+            done
+          done
+          ls -la dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: purkoctl-binaries
+          path: dist/
+
   github-release:
     name: Create GitHub Release
-    needs: [build-operator, build-executor, helm-chart]
+    needs: [build-operator, build-executor, helm-chart, build-purkoctl]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -152,10 +184,16 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: purkoctl-binaries
+          path: dist/
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           name: Purko ${{ steps.version.outputs.VERSION }}
+          files: dist/*
           body: |
             ## Purko ${{ steps.version.outputs.VERSION }}
 

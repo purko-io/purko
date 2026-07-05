@@ -81,7 +81,7 @@ func (r *AgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// Validate model config
 	if agent.Spec.Model.Provider == "" || agent.Spec.Model.Name == "" {
 		r.setCondition(agent, "Ready", metav1.ConditionFalse, "InvalidConfig", "model.provider and model.name are required")
-		r.setPhase(ctx, agent, "Failed", "InvalidConfig", "model.provider and model.name are required")
+		r.setPhase(ctx, agent, "Error", "InvalidConfig", "model.provider and model.name are required")
 		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
@@ -92,14 +92,14 @@ func (r *AgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	if err := r.ensureServiceAccount(ctx, agent, saName); err != nil {
 		r.setCondition(agent, "Ready", metav1.ConditionFalse, "SACreationFailed", err.Error())
-		r.setPhase(ctx, agent, "Failed", "SACreationFailed", err.Error())
+		r.setPhase(ctx, agent, "Error", "SACreationFailed", err.Error())
 		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
 	// ── Role + RoleBinding ───────────────────────────────────────────
 	if err := r.ensureRBAC(ctx, agent, saName); err != nil {
 		r.setCondition(agent, "Ready", metav1.ConditionFalse, "RBACFailed", err.Error())
-		r.setPhase(ctx, agent, "Failed", "RBACFailed", err.Error())
+		r.setPhase(ctx, agent, "Error", "RBACFailed", err.Error())
 		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
