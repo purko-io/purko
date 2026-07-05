@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
+	"github.com/purko-io/purko/pkg/history"
 )
 
 const (
@@ -38,6 +39,7 @@ type WorkflowReconciler struct {
 	Scheme       *runtime.Scheme
 	Clientset    *kubernetes.Clientset
 	MCPServers   MCPServersProvider // dynamic MCP server config
+	HistoryStore history.Store      // optional execution history archive (Spec 24)
 }
 
 // +kubebuilder:rbac:groups=purko.io,resources=workflows,verbs=get;list;watch;create;update;patch;delete
@@ -210,6 +212,11 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Archive the run once the run-id exists (upsert — safe across reconciles)
+	if wf.Status.Phase == "Pending" {
+		r.recordWorkflowHistory(ctx, wf)
+	}
+
 	// Validate agent references
 	agentCache := map[string]*v1alpha1.Agent{}
 	for _, step := range wf.Spec.Steps {
@@ -284,7 +291,9 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					var outMap map[string]json.RawMessage
 					if json.Unmarshal(output, &outMap) == nil {
 						if metricsRaw, ok := outMap["_metrics"]; ok {
-							var m struct{ CostUSD float64 `json:"cost_usd"` }
+							var m struct {
+								CostUSD float64 `json:"cost_usd"`
+							}
 							if json.Unmarshal(metricsRaw, &m) == nil && m.CostUSD > 0 {
 								WorkflowCostUSD.WithLabelValues(wf.Name, wf.Namespace).Add(m.CostUSD)
 							}
@@ -293,6 +302,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					// Update agent metrics from step output _metrics
 					r.updateAgentMetrics(ctx, wf.Namespace, agentName, output, ss.StartTime, &now)
 				}
+				// Archive step execution + tool call audit trail (Spec 24)
+				r.recordStepHistory(ctx, wf, ss, job.Labels[labelAgent], output)
 			} else if isJobFailed(job) {
 				// Job failed — read error
 				errMsg := r.readJobError(ctx, job)
@@ -324,6 +335,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 						r.recordAgentFailure(ctx, wf.Namespace, agentName)
 					}
 					logger.Info("Step failed", "step", stepName, "error", errMsg)
+					// Archive terminal step failure (Spec 24)
+					r.recordStepHistory(ctx, wf, ss, job.Labels[labelAgent], nil)
 				}
 				statusChanged = true
 			}
@@ -455,7 +468,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check if all done (completed + failed = total under continueOnError)
-	allFinished := wf.Status.CompletedSteps + wf.Status.FailedSteps >= wf.Status.TotalSteps
+	allFinished := wf.Status.CompletedSteps+wf.Status.FailedSteps >= wf.Status.TotalSteps
 	if allFinished {
 		now := metav1.Now()
 		wf.Status.CompletionTime = &now
@@ -476,6 +489,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 							logger.Error(err, "Failed to store late step output", "step", ss.Name)
 						}
 						logger.Info("Captured late output", "step", ss.Name, "bytes", len(output))
+						// Archive late-captured step execution (Spec 24)
+						r.recordStepHistory(ctx, wf, ss, job.Labels[labelAgent], output)
 					}
 				}
 			}
@@ -1080,6 +1095,9 @@ func (r *WorkflowReconciler) setPhase(ctx context.Context, wf *v1alpha1.Workflow
 	if err := r.Status().Update(ctx, wf); err != nil {
 		log.FromContext(ctx).Error(err, "Failed to update workflow status")
 	}
+
+	// Mirror every phase transition into the history archive (Spec 24)
+	r.recordWorkflowHistory(ctx, wf)
 }
 
 // updateAgentMetrics reads _metrics from step output and aggregates into the agent's status.
@@ -1168,8 +1186,8 @@ func (r *WorkflowReconciler) storeAgentMemory(ctx context.Context, namespace, ag
 				Name:      cmName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"purko.io/agent":        agentName,
-					"purko.io/memory-type":  "summary",
+					"purko.io/agent":       agentName,
+					"purko.io/memory-type": "summary",
 				},
 			},
 			Data: map[string]string{
