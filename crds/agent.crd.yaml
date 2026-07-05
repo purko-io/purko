@@ -453,6 +453,46 @@ spec:
                 items:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
+              shuHaRi:
+                type: object
+                description: Shu-Ha-Ri progression configuration for this agent.
+                properties:
+                  level:
+                    type: string
+                    description: Current trust level.
+                    enum:
+                    - shu
+                    - ha
+                    - ri
+                  promotedAt:
+                    type: string
+                    format: date-time
+                    description: When the agent was last promoted.
+              approvalPolicy:
+                type: object
+                description: Human-approval policy for agent actions.
+                properties:
+                  mode:
+                    type: string
+                    description: Approval mode.
+                    enum:
+                    - manual
+                    - semi-autonomous
+                    - autonomous
+                  autoApproveRiskBelow:
+                    type: string
+                    description: Auto-approve actions below this risk level.
+                    enum:
+                    - low
+                    - medium
+                    - high
+                  requireApprovalAbove:
+                    type: string
+                    description: Require human approval above this risk level.
+                    enum:
+                    - low
+                    - medium
+                    - high
               autonomyLevel:
                 type: string
                 description: Level of autonomous decision-making allowed for the agent.

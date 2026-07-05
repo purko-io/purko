@@ -2,8 +2,8 @@ apiVersion: v2
 name: purko
 description: Kubernetes-native AI agent and workflow orchestration platform
 type: application
-version: 0.2.0
-appVersion: "1.5.0"
+version: 0.2.1
+appVersion: "0.2.1"
 keywords:
   - kubernetes
   - ai
