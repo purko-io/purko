@@ -48,4 +48,4 @@ Phase 3 adds production-grade features targeting teams and organizations. These 
 
 See the [Contributing guide](contributing.md) for development setup, branch naming, commit style, and the pull request process.
 
-Have an idea or found a bug? Open an issue on [GitHub Issues](https://github.com/geored/purko/issues) or start a discussion on [GitHub Discussions](https://github.com/geored/purko/discussions).
+Have an idea or found a bug? Open an issue on [GitHub Issues](https://github.com/purko-io/purko/issues) or start a discussion on [GitHub Discussions](https://github.com/purko-io/purko/discussions).

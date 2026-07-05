@@ -2,7 +2,7 @@ apiVersion: purko.io/v1alpha1
 kind: MCPServer
 metadata:
   name: github
-  namespace: mcp-servers
+  namespace: ai-agents
 spec:
   image: ghcr.io/github/github-mcp-server:latest
   port: 8002
@@ -32,7 +32,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: github-mcp-token
-  namespace: mcp-servers
+  namespace: ai-agents
 type: Opaque
 stringData:
   token: "YOUR_GITHUB_PAT_HERE"
