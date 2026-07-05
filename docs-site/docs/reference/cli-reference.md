@@ -6,7 +6,7 @@
 
 ```bash
 # Download for your platform
-curl -Lo purkoctl https://github.com/geored/purko/releases/latest/download/purkoctl-$(uname -s)-$(uname -m)
+curl -Lo purkoctl https://github.com/purko-io/purko/releases/latest/download/purkoctl-$(uname -s)-$(uname -m)
 chmod +x purkoctl
 mv purkoctl /usr/local/bin/
 ```
