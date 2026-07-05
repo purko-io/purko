@@ -25,7 +25,7 @@ func proFeatures() map[string]bool {
 		"intent":   false,
 		"autonomy": false,
 		"sso":      false,
-		"history":  false,
+		"history":  true,
 	}
 }
 

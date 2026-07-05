@@ -23,6 +23,13 @@ operator:
   pdb:
     enabled: true
     minAvailable: 1
+  # Execution history archive (Spec 24/28): SQLite on a PVC. Survives pod
+  # restarts and workflow deletion. Community retention: 7 days (per the
+  # licensing tier limits).
+  history:
+    enabled: true
+    storageSize: 1Gi
+    storageClass: ""  # empty = cluster default storage class
 
 executor:
   image: ghcr.io/purko-io/purko-executor:latest

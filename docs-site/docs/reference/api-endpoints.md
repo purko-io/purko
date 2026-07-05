@@ -81,6 +81,15 @@ Base URL: `http://<dashboard-host>:8080`
 | `POST` | `/api/trigger/rules` | Save trigger routing rules |
 | `GET` | `/api/schedules` | List active scheduled workflows |
 
+### Execution History
+
+Read-only endpoints backed by the SQLite history archive. Unlike
+`/api/workflow/{name}` (live Kubernetes state), these return persisted
+records that survive pod garbage collection and workflow deletion.
+They return `503` when history is disabled (`operator.history.enabled: false`).
+
+| Method | Path | Description |
+|
 ---
 
 ## Endpoint Reference

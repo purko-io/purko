@@ -1,0 +1,23 @@
+{{- if .Values.operator.history.enabled }}
+# Execution history archive (Spec 24). No owner references — history must
+# survive operator redeploys and workflow deletion. ReadWriteOnce is
+# sufficient for the single-replica operator; multi-replica HA requires
+# ReadWriteMany or PostgreSQL.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: purko-history
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: purko-operator
+    app.kubernetes.io/part-of: purko
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.operator.history.storageClass }}
+  storageClassName: {{ .Values.operator.history.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.operator.history.storageSize }}
+{{- end }}

@@ -5,13 +5,14 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -21,6 +22,7 @@ import (
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 	"github.com/purko-io/purko/controllers"
 	"github.com/purko-io/purko/dashboard"
+	"github.com/purko-io/purko/pkg/history"
 	"github.com/purko-io/purko/pkg/licensing"
 	"github.com/purko-io/purko/pkg/registry"
 	"github.com/purko-io/purko/webhooks"
@@ -120,13 +122,37 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Open execution history archive (Spec 24/28 Phase 2). Enabled via
+	// PURKO_HISTORY_ENABLED (set by Helm); failures are logged but never
+	// block the operator — history is an audit concern, not a runtime
+	// dependency. Community retention is governed by the licensing tier.
+	var historyStore *history.SQLiteStore
+	if os.Getenv("PURKO_HISTORY_ENABLED") == "true" {
+		historyPath := os.Getenv("PURKO_HISTORY_PATH")
+		if historyPath == "" {
+			historyPath = "/var/lib/purko/history.db"
+		}
+		historyStore, err = history.NewSQLiteStore(historyPath)
+		if err != nil {
+			logger.Error(err, "Failed to open execution history database — continuing WITHOUT history archival", "path", historyPath)
+			historyStore = nil
+		} else {
+			defer historyStore.Close()
+			logger.Info("Execution history enabled", "path", historyPath, "retention_days", licensing.GetLimits().HistoryRetention)
+		}
+	}
+
 	// Set up Workflow controller
-	if err := (&controllers.WorkflowReconciler{
+	wfReconciler := &controllers.WorkflowReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Clientset:  clientset,
 		MCPServers: mcpRegistry,
-	}).SetupWithManager(mgr); err != nil {
+	}
+	if historyStore != nil {
+		wfReconciler.HistoryStore = historyStore
+	}
+	if err := wfReconciler.SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller", "controller", "Workflow")
 		os.Exit(1)
 	}
@@ -179,11 +205,43 @@ func main() {
 	defer cancel()
 	mcpRegistry.StartBackgroundSync(ctx)
 
+	// History retention cleanup — runs immediately at startup, then every
+	// 24h. Retention days come from the license tier (community: 7 days;
+	// 0 = unlimited, no cleanup).
+	if historyStore != nil {
+		go func() {
+			cleanup := func() {
+				retention := licensing.GetLimits().HistoryRetention
+				if retention <= 0 {
+					return
+				}
+				deleted, err := historyStore.DeleteOlderThan(retention)
+				if err != nil {
+					logger.Error(err, "Failed to cleanup history")
+				} else if deleted > 0 {
+					logger.Info("History cleanup", "deleted", deleted, "retention_days", retention)
+				}
+			}
+
+			cleanup()
+
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					cleanup()
+				}
+			}
+		}()
+	}
+
 	// Start the embedded community dashboard (Spec 28).
 	// No LLM wiring: LLMConfig/NewLLMProvider/NewIntentLLMProvider are
 	// Pro-only and not compiled into this edition; the LLM/IntentLLM fields
-	// stay nil (the interface is shared via llm_iface.go). The history store
-	// stays unwired in Phase 1: /api/history/* returns 503.
+	// stay nil (the interface is shared via llm_iface.go).
 	if enableDashboard {
 		sched := &dashboard.Scheduler{
 			Client:    mgr.GetClient(),
@@ -198,6 +256,9 @@ func main() {
 			Scheduler: sched,
 			Registry:  mcpRegistry,
 			Namespace: agentNamespace,
+		}
+		if historyStore != nil {
+			dash.History = historyStore
 		}
 		go func() {
 			if err := dash.Start(ctx); err != nil && err != http.ErrServerClosed {
