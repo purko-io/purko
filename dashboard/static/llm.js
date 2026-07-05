@@ -63,7 +63,7 @@ function loadLLMProviders() {
           <button class="btn btn--primary btn--sm" onclick="showAddLLMForm()">+ Add Provider</button>
         </div>
       </div>
-      ${cardsHTML || '<div class="empty">No LLM providers</div>'}
+      ${cardsHTML || emptyProvidersGuide()}
       <div id="llm-form-container"></div>
     `;
   });
@@ -188,4 +188,30 @@ function deleteLLMProvider(name) {
   fetch('/api/llm/provider/' + name, { method: 'DELETE' })
     .then(r => r.json())
     .then(d => { if (d.error) alert('Error: ' + d.error); else loadLLMProviders(); });
+}
+
+// Rendered when no LLMProvider exists — without one, workflow steps run in
+// demo mode (no real inference), so guide the user to their options.
+function emptyProvidersGuide() {
+  return `<div class="panel" style="border-style:dashed">
+    <h3>No LLM providers yet</h3>
+    <div style="color:var(--dim);margin-top:8px;line-height:1.6">
+      Agents need an LLM provider to run real inference — without one,
+      workflow steps run in <b>demo mode</b> and return placeholder output.
+      Pick whichever you have access to:
+      <ul style="margin:10px 0 10px 18px;line-height:1.8">
+        <li><b>Ollama</b> — local models, no API key (run Ollama in-cluster or on your network)</li>
+        <li><b>OpenRouter / any OpenAI-compatible gateway</b> — use the <i>custom</i> type with your base URL</li>
+        <li><b>Anthropic</b> or <b>OpenAI</b> — direct APIs, key in a Secret</li>
+        <li><b>Vertex AI / Gemini</b> — GCP service-account credentials</li>
+      </ul>
+      Mark your provider <code class="mono">default: true</code> and every agent
+      (including the starter agents, whose spec says <code class="mono">provider: anthropic</code>)
+      resolves to it automatically — the provider name on an agent only needs to
+      match when you run several providers side by side.
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn--primary" onclick="showAddLLMForm()">+ Add Provider</button>
+    </div>
+  </div>`;
 }

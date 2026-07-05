@@ -30,11 +30,17 @@ The post-production-coordinator produces separate export specs for each platform
 ## Screenshots
 
 
+![Agents List](../showcase-assets/video-production/screenshots/01-agents-list.png)
+
 The agents list shows the four production agents — note the script-writer's temperature 0.9, the highest of any agent in the showcases.
 
 
+![Script Writer Detail](../showcase-assets/video-production/screenshots/02-script-writer-detail.png)
+
 The script-writer detail shows the structured script format and writing rules baked into the system prompt.
 
+
+![Video Production Workflow](../showcase-assets/video-production/screenshots/03-video-production-workflow.png)
 
 The workflow DAG shows the parallel shot planning and distribution strategy branches converging into the post-production brief.
 

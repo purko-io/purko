@@ -115,7 +115,12 @@ jobs:
           # Bundle CRDs so OCI installs work standalone. Helm installs a
           # chart's crds/ dir on install but never upgrades them — CRD
           # upgrades still require: kubectl apply -f crds/
-          cp -r crds deploy/helm/crds
+          # Only the *.crd.yaml files: Helm applies EVERY file in crds/ as a
+          # manifest, and kustomization.yaml is not a cluster object
+          # (verified: it fails the install with 'no matches for kind
+          # Kustomization').
+          mkdir -p deploy/helm/crds
+          cp crds/*.crd.yaml deploy/helm/crds/
           helm package deploy/helm/
 
       - name: Push to GHCR

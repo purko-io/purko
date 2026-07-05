@@ -13,8 +13,13 @@ function render_dashboard(d) {
   // Collect metrics from agents (need detail calls)
   const el = document.getElementById('view-dashboard');
 
-  // Fetch all agent details for metrics + shu-ha-ri
-  fetch('/api/agents').then(r => r.json()).then(agents => {
+  // Fetch all agent details for metrics + shu-ha-ri, plus the provider
+  // count for the demo-mode warning banner.
+  Promise.all([
+    fetch('/api/agents').then(r => r.json()),
+    fetch('/api/llm/providers').then(r => r.json()).catch(() => ({ providers: [] })),
+  ]).then(([agents, provResp]) => {
+    const providerCount = (provResp.providers || []).length;
     const promises = agents.map(a => fetch('/api/agent/' + a.name).then(r => r.json()));
     Promise.all(promises).then(details => {
       let totalInv = 0, totalTokens = 0, totalCost = 0;
@@ -40,6 +45,14 @@ function render_dashboard(d) {
       const mcpServers = new Set(state.mcpTools.map(t => t.source)).size;
 
       el.innerHTML = `
+        ${providerCount === 0 ? `<div class="panel" style="border-color:var(--amber);margin-bottom:20px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:18px">&#x26A0;&#xFE0F;</span>
+          <div style="flex:1">
+            <b>No LLM provider configured</b> — workflow steps run in demo mode (no real inference).
+            <span style="color:var(--dim)">Add Ollama (local, no key), OpenRouter or any OpenAI-compatible gateway, Anthropic, OpenAI, or Vertex AI, and mark it default.</span>
+          </div>
+          <button class="btn btn--primary btn--sm" style="flex-shrink:0" onclick="router.go('llm')">Configure</button>
+        </div>` : ''}
         <div class="cards">
           <div class="card card--blue">
             <div class="card-value">${d.agentCount}</div>

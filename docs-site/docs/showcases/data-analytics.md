@@ -31,11 +31,17 @@ The report-generator is supervised — every client deliverable gets human revie
 ## Screenshots
 
 
+![Agents List](../showcase-assets/data-analytics/screenshots/01-agents-list.png)
+
 The agents list shows the four analytics agents with their temperature settings — note the low values for the precision-focused agents.
 
 
+![Anomaly Detector Detail](../showcase-assets/data-analytics/screenshots/02-anomaly-detector-detail.png)
+
 The anomaly-detector detail shows the five detection approaches and the structured output format including severity, evidence, and business impact.
 
+
+![Client Analytics Workflow](../showcase-assets/data-analytics/screenshots/03-client-analytics-workflow.png)
 
 The workflow DAG shows the quality check gating anomaly detection, both feeding the report, and the report feeding the insight synthesis.
 
