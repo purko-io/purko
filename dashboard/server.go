@@ -26,6 +26,10 @@ import (
 	"github.com/purko-io/purko/pkg/history"
 )
 
+// llmProviderNamespace is where LLMProvider CRs live — it must match the
+// namespace controllers/workflow_controller.go resolveLLMProvider lists.
+const llmProviderNamespace = "purko-system"
+
 type Server struct {
 	Client    client.Client
 	Clientset *kubernetes.Clientset
@@ -138,6 +142,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/api/history/run/", s.handleHistoryRunDetail)
 	mux.HandleFunc("/api/history/step/", s.handleHistoryStepTools)
 	mux.HandleFunc("/api/features", s.handleFeatures)
+	mux.HandleFunc("/api/whoami", s.handleWhoami)
 	s.registerProHandlers(mux) // pro: intent + autonomy; community: no-op
 
 	addr := fmt.Sprintf(":%d", s.Port)
@@ -152,6 +157,17 @@ func (s *Server) Start(ctx context.Context) error {
 	}()
 
 	return srv.ListenAndServe()
+}
+
+// handleWhoami surfaces the identity the auth proxy forwards (F28). Reads
+// the headers directly so the shared dashboard builds without the Pro sso
+// package; community installs have no proxy → empty user → UI hides the chip.
+func (s *Server) handleWhoami(w http.ResponseWriter, r *http.Request) {
+	user := r.Header.Get("X-Forwarded-Email")
+	if user == "" {
+		user = r.Header.Get("X-Forwarded-User")
+	}
+	writeJSON(w, map[string]string{"user": user})
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -314,8 +330,10 @@ type CreateAgentRequest struct {
 	Role          string   `json:"role"`
 	Image         string   `json:"image"`
 	Group         string   `json:"group"`
-	CostLimit     float64  `json:"costLimit"`
-	MaxIterations int      `json:"maxIterations"`
+	CostLimit         float64 `json:"costLimit"`
+	MaxIterations     int     `json:"maxIterations"`
+	MaxExecutionTime  string  `json:"maxExecutionTime"`
+	RollbackOnFailure *bool   `json:"rollbackOnFailure"`
 	SystemPrompt  string   `json:"systemPrompt"`
 	Tools         []string `json:"tools"`
 	MinReplicas   int      `json:"minReplicas"`
@@ -396,13 +414,19 @@ func (s *Server) handleCreateAgent(w http.ResponseWriter, r *http.Request) {
 		agent.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: req.Image}
 	}
 	// Set guardrails if cost limit or iterations specified
-	if req.CostLimit > 0 || req.MaxIterations > 0 {
+	if req.CostLimit > 0 || req.MaxIterations > 0 || req.MaxExecutionTime != "" || req.RollbackOnFailure != nil {
 		guardrails := map[string]interface{}{}
 		if req.CostLimit > 0 {
 			guardrails["costLimitUSD"] = req.CostLimit
 		}
 		if req.MaxIterations > 0 {
 			guardrails["maxIterations"] = req.MaxIterations
+		}
+		if req.MaxExecutionTime != "" {
+			guardrails["maxExecutionTime"] = req.MaxExecutionTime
+		}
+		if req.RollbackOnFailure != nil {
+			guardrails["rollbackOnFailure"] = *req.RollbackOnFailure
 		}
 		guardrailsJSON, _ := json.Marshal(guardrails)
 		agent.Spec.Guardrails = &runtime.RawExtension{Raw: guardrailsJSON}
@@ -599,6 +623,31 @@ func (s *Server) handleUpdateAgent(w http.ResponseWriter, r *http.Request) {
 			agent.Labels = map[string]string{}
 		}
 		agent.Labels["app.kubernetes.io/component"] = req.Group
+	}
+
+	// Merge guardrails: overlay provided values, preserve everything else
+	// (guardrails are schemaless — the form doesn't know all keys).
+	guardrails := map[string]interface{}{}
+	if agent.Spec.Guardrails != nil && agent.Spec.Guardrails.Raw != nil {
+		_ = json.Unmarshal(agent.Spec.Guardrails.Raw, &guardrails)
+	}
+	if req.CostLimit > 0 {
+		guardrails["costLimitUSD"] = req.CostLimit
+	}
+	if req.MaxIterations > 0 {
+		guardrails["maxIterations"] = req.MaxIterations
+	}
+	if req.MaxExecutionTime != "" {
+		guardrails["maxExecutionTime"] = req.MaxExecutionTime
+	}
+	if req.RollbackOnFailure != nil {
+		guardrails["rollbackOnFailure"] = *req.RollbackOnFailure
+	}
+	if len(guardrails) > 0 {
+		raw, err := json.Marshal(guardrails)
+		if err == nil {
+			agent.Spec.Guardrails = &runtime.RawExtension{Raw: raw}
+		}
 	}
 
 	// Update tools
@@ -910,6 +959,7 @@ func (s *Server) handleMCPServerCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req struct {
 		Name        string   `json:"name"`
+		URL         string   `json:"url"`
 		Image       string   `json:"image"`
 		Port        int      `json:"port"`
 		Category    string   `json:"category"`
@@ -921,6 +971,30 @@ func (s *Server) handleMCPServerCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, map[string]string{"error": err.Error()})
+		return
+	}
+
+	// Connect mode: register an already-running server by URL. These live in
+	// the mcp-servers ConfigMap (what the registry reads) — no CR, no pod.
+	if req.URL != "" {
+		entry := map[string]interface{}{
+			"name":     req.Name,
+			"url":      req.URL,
+			"auth":     req.Auth,
+			"icon":     req.Icon,
+			"category": req.Category,
+		}
+		if req.SecretRef != "" {
+			entry["secretRef"] = req.SecretRef
+		}
+		if err := s.upsertMCPConfigEntry(ctx, entry); err != nil {
+			writeJSON(w, map[string]string{"error": err.Error()})
+			return
+		}
+		if s.Registry != nil {
+			go s.Registry.Sync(context.Background())
+		}
+		writeJSON(w, map[string]string{"status": "connected", "name": req.Name})
 		return
 	}
 
@@ -945,6 +1019,85 @@ func (s *Server) handleMCPServerCreate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "created", "name": req.Name})
 }
 
+// upsertMCPConfigEntry adds or replaces (by name) a server entry in the
+// mcp-servers ConfigMap — the registry's source of truth, same format the
+// MCPServer controller writes.
+func (s *Server) upsertMCPConfigEntry(ctx context.Context, entry map[string]interface{}) error {
+	cm := &corev1.ConfigMap{}
+	key := client.ObjectKey{Name: "mcp-servers", Namespace: s.ns()}
+	create := false
+	if err := s.Client.Get(ctx, key, cm); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		create = true
+		cm.Name = key.Name
+		cm.Namespace = key.Namespace
+	}
+	var servers []map[string]interface{}
+	if raw, ok := cm.Data["servers"]; ok && raw != "" {
+		_ = json.Unmarshal([]byte(raw), &servers)
+	}
+	replaced := false
+	for i := range servers {
+		if servers[i]["name"] == entry["name"] {
+			servers[i] = entry
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		servers = append(servers, entry)
+	}
+	raw, err := json.MarshalIndent(servers, "", "  ")
+	if err != nil {
+		return err
+	}
+	if cm.Data == nil {
+		cm.Data = map[string]string{}
+	}
+	cm.Data["servers"] = string(raw)
+	if create {
+		return s.Client.Create(ctx, cm)
+	}
+	return s.Client.Update(ctx, cm)
+}
+
+// removeMCPConfigEntry deletes a server entry by name; returns whether an
+// entry was removed.
+func (s *Server) removeMCPConfigEntry(ctx context.Context, name string) (bool, error) {
+	cm := &corev1.ConfigMap{}
+	key := client.ObjectKey{Name: "mcp-servers", Namespace: s.ns()}
+	if err := s.Client.Get(ctx, key, cm); err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	var servers []map[string]interface{}
+	if raw, ok := cm.Data["servers"]; ok && raw != "" {
+		_ = json.Unmarshal([]byte(raw), &servers)
+	}
+	kept := servers[:0]
+	removed := false
+	for _, srv := range servers {
+		if srv["name"] == name {
+			removed = true
+			continue
+		}
+		kept = append(kept, srv)
+	}
+	if !removed {
+		return false, nil
+	}
+	raw, err := json.MarshalIndent(kept, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	cm.Data["servers"] = string(raw)
+	return true, s.Client.Update(ctx, cm)
+}
+
 func (s *Server) handleMCPServerCRUD(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.logUser(r)
@@ -966,6 +1119,21 @@ func (s *Server) handleMCPServerCRUD(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if found == nil {
+		// URL-connected servers have no CR — they live in the ConfigMap.
+		if r.Method == "DELETE" || (r.Method == "POST" && r.URL.Query().Get("action") == "delete") {
+			removed, err := s.removeMCPConfigEntry(ctx, name)
+			if err != nil {
+				writeJSON(w, map[string]string{"error": err.Error()})
+				return
+			}
+			if removed {
+				if s.Registry != nil {
+					go s.Registry.Sync(context.Background())
+				}
+				writeJSON(w, map[string]string{"status": "deleted", "name": name})
+				return
+			}
+		}
 		http.Error(w, "not found", 404)
 		return
 	}
@@ -1014,6 +1182,7 @@ func (s *Server) handleLLMProviderCreate(w http.ResponseWriter, r *http.Request)
 		Name      string            `json:"name"`
 		Type      string            `json:"type"`
 		Model     string            `json:"model"`
+		Endpoint  string            `json:"endpoint"`
 		Default   bool              `json:"default"`
 		SecretRef string            `json:"secretRef"`
 		SecretKey string            `json:"secretKey"`
@@ -1028,10 +1197,20 @@ func (s *Server) handleLLMProviderCreate(w http.ResponseWriter, r *http.Request)
 	provider.APIVersion = "purko.io/v1alpha1"
 	provider.Kind = "LLMProvider"
 	provider.Name = req.Name
-	provider.Namespace = s.ns()
+	// Must match the namespace resolveLLMProvider lists (the controller
+	// only looks in purko-system); s.ns() is the agent namespace and
+	// providers created there are invisible to workflows.
+	provider.Namespace = llmProviderNamespace
 	provider.Spec.Type = req.Type
 	provider.Spec.Model = req.Model
 	provider.Spec.Default = req.Default
+	// The controller only reads spec.endpoint (never config[endpoint]),
+	// so promote the config key older UI guidance told users to set.
+	provider.Spec.Endpoint = req.Endpoint
+	if provider.Spec.Endpoint == "" {
+		provider.Spec.Endpoint = req.Config["endpoint"]
+	}
+	delete(req.Config, "endpoint")
 	if len(req.Config) > 0 {
 		provider.Spec.Config = req.Config
 	}
@@ -1127,6 +1306,37 @@ func (s *Server) handleApproveStep(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "approved", "workflow": wfName, "step": stepName})
 }
 
+// writeStepStatusLogs serves the error/output persisted in workflow status
+// when the step's pod is gone (TTL or failFast cleanup) — the panel must
+// still explain the failure (F26).
+func (s *Server) writeStepStatusLogs(ctx context.Context, w http.ResponseWriter, wfName, stepName, fallback string) {
+	wf := &v1alpha1.Workflow{}
+	if err := s.Client.Get(ctx, client.ObjectKey{Name: wfName, Namespace: s.ns()}, wf); err == nil {
+		for i := range wf.Status.StepStatuses {
+			ss := &wf.Status.StepStatuses[i]
+			if ss.Name != stepName {
+				continue
+			}
+			var lines []string
+			if ss.Error != "" {
+				lines = append(lines, strings.Split(ss.Error, "\n")...)
+			}
+			if ss.Output != nil && len(ss.Output.Raw) > 2 {
+				lines = append(lines, "OUTPUT:"+string(ss.Output.Raw))
+			}
+			if len(lines) > 0 {
+				status := "complete"
+				if ss.Phase == "Failed" {
+					status = "failed"
+				}
+				writeJSON(w, map[string]interface{}{"lines": lines, "status": status})
+				return
+			}
+		}
+	}
+	writeJSON(w, map[string]interface{}{"lines": []string{}, "status": fallback})
+}
+
 func (s *Server) handleStepLogs(w http.ResponseWriter, r *http.Request) {
 	// Path: /api/logs/{workflow}/{step}
 	path := strings.TrimPrefix(r.URL.Path, "/api/logs/")
@@ -1148,7 +1358,7 @@ func (s *Server) handleStepLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(jobList.Items) == 0 {
-		writeJSON(w, map[string]interface{}{"lines": []string{}, "status": "no job"})
+		s.writeStepStatusLogs(ctx, w, wfName, stepName, "no job")
 		return
 	}
 
@@ -1164,7 +1374,7 @@ func (s *Server) handleStepLogs(w http.ResponseWriter, r *http.Request) {
 		LabelSelector: fmt.Sprintf("job-name=%s", job.Name),
 	})
 	if err != nil || len(pods.Items) == 0 {
-		writeJSON(w, map[string]interface{}{"lines": []string{}, "status": "no pods"})
+		s.writeStepStatusLogs(ctx, w, wfName, stepName, "no pods")
 		return
 	}
 
@@ -1261,8 +1471,25 @@ func (s *Server) handleRerunWorkflow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save the spec
+	// Save the spec; apply optional parameter overrides from the body while
+	// keeping everything else (step input templates, timeouts, retries).
 	spec := wf.Spec
+	var req struct {
+		Parameters map[string]string `json:"parameters"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req) // empty body is fine
+	}
+	if len(req.Parameters) > 0 {
+		merged := map[string]string{}
+		for k, v := range spec.Parameters {
+			merged[k] = v
+		}
+		for k, v := range req.Parameters {
+			merged[k] = v
+		}
+		spec.Parameters = merged
+	}
 
 	// Delete the old workflow (cascading cleans up Jobs + ConfigMap)
 	if err := s.Client.Delete(ctx, wf); err != nil {
@@ -1307,7 +1534,7 @@ func (s *Server) buildOverview(ctx context.Context) OverviewData {
 			succeeded++
 		case "Running":
 			running++
-		case "Failed":
+		case "Failed", "CompletedWithErrors":
 			failed++
 		}
 	}

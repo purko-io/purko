@@ -420,7 +420,7 @@ func findActiveStep(statuses []v1alpha1.StepStatus) *v1alpha1.StepStatus {
 	}
 	var last *v1alpha1.StepStatus
 	for i := range statuses {
-		if statuses[i].Phase == "Succeeded" || statuses[i].Phase == "Failed" {
+		if statuses[i].Phase == "Succeeded" || statuses[i].Phase == "CompletedWithErrors" || statuses[i].Phase == "Failed" {
 			last = &statuses[i]
 		}
 	}
@@ -516,7 +516,7 @@ func runWorkflowRerun(cmd *cobra.Command, args []string) error {
 	}
 
 	switch wf.Status.Phase {
-	case "Succeeded", "Failed", "Cancelled":
+	case "Succeeded", "CompletedWithErrors", "Failed", "Cancelled":
 		// OK to rerun
 	case "Running", "Pending":
 		return fmt.Errorf("workflow %q is still running. Use 'purkoctl workflow cancel' first", name)

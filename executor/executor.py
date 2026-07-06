@@ -90,13 +90,20 @@ all_mcp_clients = []
 
 # ── MCP Client ────────────────────────────────────────────────────────
 
+def mcp_endpoint(server_url):
+    """Normalize an MCP server URL: base URLs get /mcp appended, full
+    /mcp endpoints pass through (F21 — users paste either form)."""
+    base = server_url.rstrip('/')
+    return base if base.endswith('/mcp') else base + '/mcp'
+
+
 class MCPClient:
     """Lightweight MCP JSON-RPC 2.0 client for streamable-http transport."""
 
     def __init__(self, server_url, server_name='unknown', auth_token=None):
         self.server_url = server_url.rstrip('/')
         self.server_name = server_name
-        self.endpoint = f"{self.server_url}/mcp"
+        self.endpoint = mcp_endpoint(self.server_url)
         if '127.0.0.1' in self.endpoint:
             self.endpoint = self.endpoint.replace('127.0.0.1', 'localhost')
         self.session_id = None
@@ -508,10 +515,24 @@ total_tokens_in = 0
 total_tokens_out = 0
 
 
+def model_pricing(model_name):
+    """Resolve per-token pricing: MODEL_PRICE_IN/OUT env (USD per MToken,
+    from the LLMProvider CR) wins; then the built-in table; unknown models
+    cost $0 — a local/self-hosted model must never be billed at a made-up
+    default rate."""
+    env_in, env_out = os.environ.get('MODEL_PRICE_IN'), os.environ.get('MODEL_PRICE_OUT')
+    if env_in and env_out:
+        try:
+            return {'input': float(env_in) / 1e6, 'output': float(env_out) / 1e6}
+        except ValueError:
+            logger.warning(f"Invalid MODEL_PRICE_IN/OUT ({env_in}/{env_out}), ignoring")
+    return TOKEN_PRICING.get(model_name, {'input': 0.0, 'output': 0.0})
+
+
 def track_cost(input_tokens, output_tokens):
     """Track cumulative cost. Raises if cost limit exceeded."""
     global total_cost_usd, total_tokens_in, total_tokens_out
-    pricing = TOKEN_PRICING.get(MODEL_NAME, {'input': 5.0 / 1e6, 'output': 15.0 / 1e6})
+    pricing = model_pricing(MODEL_NAME)
     cost = input_tokens * pricing['input'] + output_tokens * pricing['output']
     total_cost_usd += cost
     total_tokens_in += input_tokens
@@ -925,14 +946,16 @@ def run_react_loop(agent_tools, tool_defs):
                 response = call_openai(messages, SYSTEM_PROMPT, tools)
                 final_output, tool_requests = parse_openai_response(response, messages)
 
-        except requests.exceptions.ConnectionError:
-            logger.warning("Model API not reachable — running in demo mode")
-            final_output = run_demo_mode(agent_tools)
+        except requests.exceptions.ConnectionError as e:
+            # A configured endpoint that is unreachable is an outage, not an
+            # invitation to fabricate output (F24) — fail the step loudly.
+            logger.error(f"Model API not reachable: {e}")
+            final_output = api_failure_output(f"Model API not reachable: {e}", STEP_NAME)
             break
         except requests.exceptions.HTTPError as e:
-            if e.response and e.response.status_code == 401:
-                logger.warning("Model API key invalid — running in demo mode")
-                final_output = run_demo_mode(agent_tools)
+            if e.response is not None and e.response.status_code == 401:
+                logger.error("Model API rejected credentials (401)")
+                final_output = api_failure_output("Model API rejected credentials (HTTP 401) — check the provider API key", STEP_NAME)
             else:
                 final_output = {'error': str(e), 'step': STEP_NAME}
             break
@@ -1351,6 +1374,12 @@ def main():
     print(f"OUTPUT:{output_json}")
     logger.info(f"Step completed: {len(output_json)} bytes, cost: ${total_cost_usd:.4f}")
     sys.exit(output_exit_code(output))
+
+
+def api_failure_output(detail, step):
+    """Error payload for model-API failures — exits nonzero via
+    output_exit_code, never demo mode."""
+    return {'error': detail, 'step': step}
 
 
 def output_exit_code(output):

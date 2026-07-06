@@ -61,7 +61,7 @@ function loadMCPServers() {
       <div class="section">
         <div class="section-title" style="justify-content:space-between">
           <span>MCP Servers <span class="badge">${servers.length}</span></span>
-          <button class="btn btn--primary btn--sm" onclick="showDeployMCPForm()">+ Deploy MCP Server</button>
+          <button class="btn btn--primary btn--sm" onclick="showDeployMCPForm()">+ Add MCP Server</button>
         </div>
       </div>
       ${cardsHTML || '<div class="empty">No MCP servers</div>'}
@@ -73,46 +73,72 @@ function loadMCPServers() {
 function showDeployMCPForm() {
   const el = document.getElementById('mcp-form-container');
   el.innerHTML = `<div class="panel">
-    <h3>Deploy MCP Server</h3>
+    <h3>Add MCP Server</h3>
     <div class="form-grid" style="margin-top:12px">
+      <label>Mode</label>
+      <select id="mcp-mode" onchange="updateMCPFormMode()">
+        <option value="connect">Connect existing server (URL)</option>
+        <option value="deploy">Deploy new server (container image)</option>
+      </select>
       <label>Name</label><input id="mcp-name" placeholder="my-server" spellcheck="false">
-      <label>Image</label><input id="mcp-image" placeholder="quay.io/org/image:tag" spellcheck="false">
-      <label>Port</label><input type="number" id="mcp-port" value="8000" min="1" max="65535" style="width:100px">
+      <label id="mcp-url-label">URL</label>
+      <div id="mcp-url-wrap">
+        <input id="mcp-url" placeholder="http://my-server.ai-agents:8000/mcp" spellcheck="false">
+        <div style="font-size:10px;color:var(--dim);margin-top:4px">Full MCP endpoint as reachable from inside the cluster — include the path (usually /mcp for streamable HTTP).</div>
+      </div>
+      <label id="mcp-image-label">Image</label><input id="mcp-image" placeholder="quay.io/org/image:tag" spellcheck="false">
+      <label id="mcp-port-label">Port</label><input type="number" id="mcp-port" value="8000" min="1" max="65535" style="width:100px">
       <label>Category</label><input id="mcp-cat" placeholder="e.g. kubernetes, code, incident" spellcheck="false">
       <label>Icon</label><input id="mcp-icon" placeholder="emoji" spellcheck="false" style="width:100px">
       <label>Auth</label><select id="mcp-auth"><option value="none">None</option><option value="bearer">Bearer Token</option></select>
       <label>Secret Ref</label><input id="mcp-secret" placeholder="secret name (if bearer)" spellcheck="false">
-      <label>Host Network</label><select id="mcp-hostnet"><option value="true">Yes (minikube)</option><option value="false">No</option></select>
-      <label>Args</label><textarea id="mcp-args" rows="2" placeholder="one arg per line" style="font-family:var(--mono);font-size:12px"></textarea>
+      <label id="mcp-hostnet-label">Host Network</label><select id="mcp-hostnet"><option value="false">No</option><option value="true">Yes (minikube)</option></select>
+      <label id="mcp-args-label">Args</label><textarea id="mcp-args" rows="2" placeholder="one arg per line" style="font-family:var(--mono);font-size:12px"></textarea>
     </div>
     <div class="form-actions">
-      <button class="btn btn--primary" onclick="createMCPServer()">Deploy</button>
+      <button class="btn btn--primary" id="mcp-submit" onclick="createMCPServer()">Connect</button>
       <button class="btn btn--secondary" onclick="document.getElementById('mcp-form-container').innerHTML=''">Cancel</button>
     </div>
     <div id="mcp-result"></div>
   </div>`;
+  updateMCPFormMode();
+}
+
+function updateMCPFormMode() {
+  const connect = document.getElementById('mcp-mode').value === 'connect';
+  const show = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
+  ['mcp-url-label', 'mcp-url-wrap'].forEach(id => show(id, connect));
+  ['mcp-image-label', 'mcp-image', 'mcp-port-label', 'mcp-port', 'mcp-hostnet-label', 'mcp-hostnet', 'mcp-args-label', 'mcp-args'].forEach(id => show(id, !connect));
+  document.getElementById('mcp-submit').textContent = connect ? 'Connect' : 'Deploy';
 }
 
 function createMCPServer() {
-  const args = document.getElementById('mcp-args').value.trim().split('\n').filter(a => a.trim());
+  const connect = document.getElementById('mcp-mode').value === 'connect';
   const body = {
     name: document.getElementById('mcp-name').value.trim(),
-    image: document.getElementById('mcp-image').value.trim(),
-    port: parseInt(document.getElementById('mcp-port').value),
     category: document.getElementById('mcp-cat').value.trim(),
     icon: document.getElementById('mcp-icon').value.trim(),
     auth: document.getElementById('mcp-auth').value,
     secretRef: document.getElementById('mcp-secret').value.trim(),
-    hostNetwork: document.getElementById('mcp-hostnet').value === 'true',
-    args,
   };
-  if (!body.name || !body.image) { showResult('mcp-result', 'err', 'Name and image required'); return; }
+  if (!body.name) { showResult('mcp-result', 'err', 'Name required'); return; }
+
+  if (connect) {
+    body.url = document.getElementById('mcp-url').value.trim();
+    if (!body.url) { showResult('mcp-result', 'err', 'URL required'); return; }
+  } else {
+    body.image = document.getElementById('mcp-image').value.trim();
+    if (!body.image) { showResult('mcp-result', 'err', 'Image required'); return; }
+    body.port = parseInt(document.getElementById('mcp-port').value);
+    body.hostNetwork = document.getElementById('mcp-hostnet').value === 'true';
+    body.args = document.getElementById('mcp-args').value.trim().split('\n').filter(a => a.trim());
+  }
 
   fetch('/api/mcp/server', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
     .then(d => {
       if (d.error) showResult('mcp-result', 'err', 'Error: ' + d.error);
-      else { showResult('mcp-result', 'ok', `MCPServer "${d.name}" created!`); setTimeout(loadMCPServers, 2000); }
+      else { showResult('mcp-result', 'ok', connect ? `Connected "${d.name}" — discovering tools...` : `MCPServer "${d.name}" created!`); setTimeout(loadMCPServers, 3000); }
     });
 }
 

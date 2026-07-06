@@ -36,6 +36,10 @@ const router = {
     state.currentTab = tab;
     state.detail = detail || null;
 
+    // Keep the URL in sync so browser refresh returns to this view
+    const hash = '#/' + tab + (detail && detail.name ? '/' + encodeURIComponent(detail.name) : '');
+    if (location.hash !== hash) history.replaceState(null, '', hash);
+
     // Update nav
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
@@ -64,6 +68,10 @@ function connectSSE() {
     // Notify active module
     if (typeof window['update_' + state.currentTab] === 'function' && !state.detail) {
       window['update_' + state.currentTab](d);
+    }
+    // Detail views get their own updater (e.g. live workflow DAG progress)
+    if (state.detail && typeof window['update_' + state.currentTab + '_detail'] === 'function') {
+      window['update_' + state.currentTab + '_detail'](d);
     }
   };
   es.onerror = function() {
@@ -230,8 +238,33 @@ Promise.all([
   state.data = d;
   state.features = features;
   document.getElementById('header-time').textContent = new Date(d.timestamp).toLocaleTimeString();
-  router.go('dashboard');
+  routeFromHash();
+}).catch(() => {
+  // Backend unreachable at boot (rollout, flapping port-forward): route
+  // anyway — tabs fetch their own data and SSE reconnects — instead of
+  // leaving a permanently blank page (F32).
+  routeFromHash();
 });
+
+// Route from the URL hash (#/tab or #/tab/detail) so refresh and shared
+// links land on the same view instead of resetting to the dashboard.
+function routeFromHash() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  const known = ['dashboard', 'agents', 'workflows', 'mcp', 'llm', 'history', 'settings'];
+  const tab = known.includes(parts[0]) ? parts[0] : 'dashboard';
+  const detail = parts[1] ? { name: decodeURIComponent(parts[1]) } : null;
+  router.go(tab, detail);
+}
+window.addEventListener('hashchange', routeFromHash);
 
 connectSSE();
 loadMCPToolsList();
+
+// Identity chip (F28): the auth proxy forwards the user; without SSO the
+// endpoint returns empty and the chip stays hidden.
+fetch('/api/whoami').then(r => r.json()).then(d => {
+  if (d.user) {
+    document.getElementById('header-user-email').textContent = d.user;
+    document.getElementById('header-user').style.display = '';
+  }
+}).catch(() => {});

@@ -381,6 +381,7 @@ spec:
                 - Pending
                 - Running
                 - Succeeded
+                - CompletedWithErrors
                 - Failed
                 - Cancelled
               conditions:

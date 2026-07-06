@@ -102,8 +102,29 @@ function render_workflows(d) {
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') processIntent(); });
 }
 
+// Re-render the open workflow detail when a step or the workflow itself
+// changes phase (driven by SSE). Transition-only: no flicker while nothing
+// changes, and the open logs panel is restored after re-render.
+let _wfDetailSnapshot = '';
+
+function wfSnapshot(phase, steps) {
+  return phase + '|' + (steps || []).map(s => s.name + ':' + s.phase).sort().join(',');
+}
+
+function update_workflows_detail(d) {
+  if (!state.detail || !state.detail.name) return;
+  const w = (d.workflows || []).find(x => x.name === state.detail.name);
+  if (!w) return;
+  const snap = wfSnapshot(w.phase, w.steps);
+  if (snap === _wfDetailSnapshot) return;
+  _wfDetailSnapshot = snap;
+  viewWorkflow(state.detail.name);
+}
+
 function viewWorkflow(name) {
   state.detail = { type: 'workflow', name };
+  const hash = '#/workflows/' + encodeURIComponent(name);
+  if (location.hash !== hash) history.replaceState(null, '', hash);
   fetch('/api/workflow/' + name).then(r => r.json()).then(d => {
     const w = d.workflow;
     const steps = w.spec.steps || [];
@@ -172,7 +193,7 @@ function viewWorkflow(name) {
 
     const el = document.getElementById('view-workflows');
     el.innerHTML = `
-      <span class="back-link" onclick="closeStepLogs();state.detail=null;init_workflows()">&larr; Back to workflows</span>
+      <span class="back-link" onclick="closeStepLogs();router.go('workflows')">&larr; Back to workflows</span>
       <div class="wf-split" id="wf-split">
         <div class="wf-main">
           <div class="panel">
@@ -216,6 +237,14 @@ function viewWorkflow(name) {
 
     // Store workflow data for rerun form
     window._lastViewedWorkflow = w;
+
+    // Seed the SSE transition snapshot so the first event doesn't re-render
+    _wfDetailSnapshot = wfSnapshot(w.status.phase, w.status.stepStatuses);
+
+    // Restore the logs panel a re-render closed
+    if (window._openLogs && window._openLogs.workflowName === name) {
+      openStepLogs(window._openLogs.workflowName, window._openLogs.stepName, window._openLogs.agentName);
+    }
   });
 }
 
@@ -275,12 +304,14 @@ function openStepLogs(workflowName, stepName, agentName) {
   </div>`;
 
   // Start polling
+  window._openLogs = { workflowName, stepName, agentName };
   fetchStepLogs(workflowName, stepName);
   if (logsPollingInterval) clearInterval(logsPollingInterval);
   logsPollingInterval = setInterval(() => fetchStepLogs(workflowName, stepName), 3000);
 }
 
 function closeStepLogs() {
+  window._openLogs = null;
   if (logsPollingInterval) { clearInterval(logsPollingInterval); logsPollingInterval = null; }
   const split = document.getElementById('wf-split');
   if (split) split.classList.remove('has-logs');
@@ -472,6 +503,21 @@ function renderLogEntries(lines, status) {
       html += `<div class="log-iteration" style="border-color:var(--green)"><span style="color:var(--green)">&#10003; ${esc(line.replace(/.*INFO\s*/, ''))}</span></div>`;
       continue;
     }
+
+    // Executor ERROR lines — surface the actual failure reason
+    if (/\sERROR\s/.test(line)) {
+      html += `<div class="log-blocked">&#10007; ${esc(line.replace(/.*ERROR\s*/, ''))}</div>`;
+      continue;
+    }
+
+    // Final OUTPUT json — show its error field if the step failed
+    if (line.startsWith('OUTPUT:')) {
+      try {
+        const out = JSON.parse(line.slice(7));
+        if (out.error) html += `<div class="log-blocked">&#10007; ${esc(String(out.error))}</div>`;
+      } catch (e) { /* non-JSON output — nothing to surface */ }
+      continue;
+    }
   }
 
   // Status footer
@@ -646,8 +692,7 @@ function showRerunForm(workflowName) {
 
 function executeRerun(workflowName) {
   fetch('/api/workflow/' + workflowName).then(r => r.json()).then(d => {
-    const w = d.workflow;
-    const params = w.spec.parameters || {};
+    const params = (d.workflow.spec || {}).parameters || {};
 
     // Read updated parameter values from form
     const newParams = {};
@@ -656,47 +701,21 @@ function executeRerun(workflowName) {
       newParams[key] = input ? input.value : params[key];
     }
 
-    // Delete old workflow, then create new one with updated params
-    fetch('/api/delete/workflow/' + workflowName, { method: 'POST' })
-      .then(r => r.json())
-      .then(delResult => {
-        if (delResult.error) {
-          showResult('rerun-result', 'err', 'Delete failed: ' + delResult.error);
-          return;
-        }
-
-        // Wait for deletion, then create
-        setTimeout(() => {
-          const body = {
-            name: workflowName,
-            description: w.spec.description || '',
-            parallelism: w.spec.parallelism || 1,
-            strategy: w.spec.failureStrategy || 'failFast',
-            parameters: newParams,
-            concurrency: w.spec.concurrency ? w.spec.concurrency.policy : '',
-            steps: (w.spec.steps || []).map(s => ({
-              name: s.name,
-              agent: s.agentRef ? s.agentRef.name : '',
-              type: s.type || '',
-              dependsOn: s.dependsOn || [],
-              input: '',
-            })),
-          };
-
-          fetch('/api/create/workflow', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          }).then(r => r.json()).then(createResult => {
-            if (createResult.error) {
-              showResult('rerun-result', 'err', 'Create failed: ' + createResult.error);
-            } else {
-              showResult('rerun-result', 'ok', `Workflow "${workflowName}" re-launched with new parameters!`);
-              setTimeout(() => viewWorkflow(workflowName), 3000);
-            }
-          });
-        }, 2000);
-      });
+    // Server-side rerun keeps the full spec (step input templates,
+    // timeouts, retries) and only swaps the parameters — rebuilding the
+    // spec here from the summary API loses step inputs.
+    fetch('/api/rerun/workflow/' + workflowName, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parameters: newParams }),
+    }).then(r => r.json()).then(result => {
+      if (result.error) {
+        showResult('rerun-result', 'err', 'Re-run failed: ' + result.error);
+      } else {
+        showResult('rerun-result', 'ok', `Workflow "${workflowName}" re-launched with new parameters!`);
+        setTimeout(() => viewWorkflow(workflowName), 3000);
+      }
+    });
   });
 }
 
@@ -859,6 +878,9 @@ function showWorkflowBuilder() {
             <select id="wfb-strategy" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);padding:4px 8px;color:var(--text);font-size:12px"><option value="continueOnError">Continue</option><option value="failFast">Fail Fast</option></select>
           </div>
         </div>
+        <div style="margin-bottom:14px">
+          <textarea id="wfb-task" rows="2" placeholder="Task — what should this workflow do? Passed to every step as its input." spellcheck="false" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font);resize:vertical"></textarea>
+        </div>
         <div id="wfb-blocks" class="builder-blocks"><div style="color:var(--dim);font-size:13px;margin:auto">Click agents to add steps</div></div>
         <div style="display:flex;gap:10px;margin-top:14px">
           <button class="btn btn--primary" onclick="deployBuilderWf()">Deploy Workflow</button>
@@ -906,13 +928,15 @@ async function deployBuilderWf() {
   const name = document.getElementById('wfb-name').value.trim();
   if (!name) { showResult('wfb-result', 'err', 'Name required'); return; }
   if (wfBuilderSteps.length === 0) { showResult('wfb-result', 'err', 'Add at least one step'); return; }
+  const task = document.getElementById('wfb-task').value.trim();
+  if (!task) { showResult('wfb-result', 'err', 'Task required — agents need an input to act on'); return; }
 
   const body = {
     name,
-    description: `Built with ${wfBuilderSteps.length} steps`,
+    description: task,
     parallelism: parseInt(document.getElementById('wfb-par').value) || 2,
     strategy: document.getElementById('wfb-strategy').value,
-    steps: wfBuilderSteps.map(s => ({ name: s.name, agent: s.agent, type: '', dependsOn: s.dependsOn, input: '' })),
+    steps: wfBuilderSteps.map(s => ({ name: s.name, agent: s.agent, type: '', dependsOn: s.dependsOn, input: task })),
   };
 
   const resp = await fetch('/api/create/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
