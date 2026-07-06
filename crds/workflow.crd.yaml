@@ -457,6 +457,8 @@ spec:
                       - Succeeded
                       - Failed
                       - Skipped
+                      - RollingBack
+                      - RolledBack
                     startTime:
                       type: string
                       description: Time when the step started.

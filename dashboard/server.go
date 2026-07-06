@@ -319,26 +319,26 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateAgentRequest struct {
-	Name          string   `json:"name"`
-	Namespace     string   `json:"namespace"`
-	Type          string   `json:"type"`
-	Provider      string   `json:"provider"`
-	Model         string   `json:"model"`
-	Temperature   float64  `json:"temperature"`
-	Autonomy      string   `json:"autonomy"`
-	Memory        string   `json:"memory"`
-	Role          string   `json:"role"`
-	Image         string   `json:"image"`
-	Group         string   `json:"group"`
-	CostLimit         float64 `json:"costLimit"`
-	MaxIterations     int     `json:"maxIterations"`
-	MaxExecutionTime  string  `json:"maxExecutionTime"`
-	RollbackOnFailure *bool   `json:"rollbackOnFailure"`
-	SystemPrompt  string   `json:"systemPrompt"`
-	Tools         []string `json:"tools"`
-	MinReplicas   int      `json:"minReplicas"`
-	MaxReplicas   int      `json:"maxReplicas"`
-	TargetCPU     int      `json:"targetCPU"`
+	Name              string   `json:"name"`
+	Namespace         string   `json:"namespace"`
+	Type              string   `json:"type"`
+	Provider          string   `json:"provider"`
+	Model             string   `json:"model"`
+	Temperature       float64  `json:"temperature"`
+	Autonomy          string   `json:"autonomy"`
+	Memory            string   `json:"memory"`
+	Role              string   `json:"role"`
+	Image             string   `json:"image"`
+	Group             string   `json:"group"`
+	CostLimit         float64  `json:"costLimit"`
+	MaxIterations     int      `json:"maxIterations"`
+	MaxExecutionTime  string   `json:"maxExecutionTime"`
+	RollbackOnFailure *bool    `json:"rollbackOnFailure"`
+	SystemPrompt      string   `json:"systemPrompt"`
+	Tools             []string `json:"tools"`
+	MinReplicas       int      `json:"minReplicas"`
+	MaxReplicas       int      `json:"maxReplicas"`
+	TargetCPU         int      `json:"targetCPU"`
 }
 
 type CreateWorkflowRequest struct {
