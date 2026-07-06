@@ -31,6 +31,12 @@ operator:
     storageSize: 1Gi
     storageClass: ""  # empty = cluster default storage class
 
+# License tier for limits and history retention. The community edition
+# defaults to "community" (7-day history retention, community limits).
+# Empty string = dev mode (no limits) for local contributor clusters.
+licensing:
+  tier: "community"
+
 executor:
   image: ghcr.io/purko-io/purko-executor:latest
   variants:

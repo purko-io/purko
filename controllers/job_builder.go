@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -75,12 +76,21 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 		timeout = int64(step.StepTimeout.TimeoutSeconds)
 	}
 
+	// When resolution fell back to the default provider (name mismatch),
+	// the agent's model name belongs to a provider that doesn't exist —
+	// sending it as-is fails (e.g. a claude model name → ollama 404), so
+	// the fallback provider's own default model wins.
+	modelName := agent.Spec.Model.Name
+	if llmProvider != nil && llmProvider.Name != agent.Spec.Model.Provider && llmProvider.Spec.Model != "" {
+		modelName = llmProvider.Spec.Model
+	}
+
 	// Build env vars
 	env := []corev1.EnvVar{
 		{Name: "STEP_NAME", Value: step.Name},
 		{Name: "WORKFLOW_NAME", Value: wf.Name},
 		{Name: "MODEL_PROVIDER", Value: agent.Spec.Model.Provider},
-		{Name: "MODEL_NAME", Value: agent.Spec.Model.Name},
+		{Name: "MODEL_NAME", Value: modelName},
 	}
 	if agent.Spec.Model.MaxTokens != nil {
 		env = append(env, corev1.EnvVar{Name: "MODEL_MAX_TOKENS", Value: fmt.Sprintf("%d", *agent.Spec.Model.MaxTokens)})
@@ -105,6 +115,26 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 
 		if llmAPIKey != "" {
 			env = append(env, corev1.EnvVar{Name: "MODEL_API_KEY", Value: llmAPIKey})
+		}
+
+		// Providers know their latency profile (local ollama queues requests
+		// well past the executor's 120s default read timeout).
+		if v := llmProvider.Spec.Config["timeoutSeconds"]; v != "" {
+			if _, err := strconv.Atoi(v); err == nil {
+				env = append(env, corev1.EnvVar{Name: "MODEL_TIMEOUT", Value: v})
+			}
+		}
+
+		// Provider-declared pricing for the resolved model (USD per MToken);
+		// without it the executor prices unknown models at $0.
+		for _, m := range llmProvider.Spec.Models {
+			if m.Name == modelName && m.Pricing != nil {
+				env = append(env,
+					corev1.EnvVar{Name: "MODEL_PRICE_IN", Value: strconv.FormatFloat(m.Pricing.InputPerMToken, 'f', -1, 64)},
+					corev1.EnvVar{Name: "MODEL_PRICE_OUT", Value: strconv.FormatFloat(m.Pricing.OutputPerMToken, 'f', -1, 64)},
+				)
+				break
+			}
 		}
 
 		if llmProvider.Spec.Type == "vertex-ai" {

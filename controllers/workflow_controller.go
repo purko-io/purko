@@ -84,7 +84,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Skip if already completed, failed, or cancelled (but NOT RollingBack — that needs monitoring)
-	if wf.Status.Phase == "Succeeded" || wf.Status.Phase == "Failed" || wf.Status.Phase == "Cancelled" {
+	if wf.Status.Phase == "Succeeded" || wf.Status.Phase == "CompletedWithErrors" || wf.Status.Phase == "Failed" || wf.Status.Phase == "Cancelled" {
 		return ctrl.Result{}, nil
 	}
 
@@ -125,8 +125,10 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					rolledBack = append(rolledBack, ss.Name)
 				}
 			}
-			r.setPhase(ctx, wf, "Failed", "RolledBack",
-				fmt.Sprintf("Rolled back %d steps: %s", len(rolledBack), strings.Join(rolledBack, ", ")))
+			if err := r.setPhase(ctx, wf, "Failed", "RolledBack",
+				fmt.Sprintf("Rolled back %d steps: %s", len(rolledBack), strings.Join(rolledBack, ", "))); err != nil {
+				return ctrl.Result{}, err
+			}
 			WorkflowsActive.WithLabelValues(wf.Namespace).Dec()
 			return ctrl.Result{}, nil
 		}
@@ -148,7 +150,9 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		now := metav1.Now()
 		wf.Status.CompletionTime = &now
-		r.setPhase(ctx, wf, "Cancelled", "UserCancelled", "Workflow cancelled via purko.io/cancel annotation")
+		if err := r.setPhase(ctx, wf, "Cancelled", "UserCancelled", "Workflow cancelled via purko.io/cancel annotation"); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -170,8 +174,10 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			r.deleteWorkflowJobs(ctx, wf)
 			now := metav1.Now()
 			wf.Status.CompletionTime = &now
-			r.setPhase(ctx, wf, "Failed", "WorkflowTimeout",
-				fmt.Sprintf("Workflow exceeded timeout of %s (elapsed: %s)", workflowTimeout, elapsed.Round(time.Second)))
+			if err := r.setPhase(ctx, wf, "Failed", "WorkflowTimeout",
+				fmt.Sprintf("Workflow exceeded timeout of %s (elapsed: %s)", workflowTimeout, elapsed.Round(time.Second))); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, nil
 		}
 	}
@@ -345,13 +351,17 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Check for failFast
 	if wf.Status.FailedSteps > 0 && wf.Spec.FailureStrategy == "failFast" {
-		r.deleteWorkflowJobs(ctx, wf)
+		// Stop in-flight/queued steps only — the failed step's job holds the
+		// logs the user needs for diagnosis (F26), TTL reaps it later.
+		r.stopJobs(ctx, wf, jobsToStopOnFailure(wf))
 		for i := range wf.Status.StepStatuses {
 			if wf.Status.StepStatuses[i].Phase == "Running" || wf.Status.StepStatuses[i].Phase == "" || wf.Status.StepStatuses[i].Phase == "Pending" {
 				wf.Status.StepStatuses[i].Phase = "Skipped"
 			}
 		}
-		r.setPhase(ctx, wf, "Failed", "StepFailed", "A step failed with failFast strategy")
+		if err := r.setPhase(ctx, wf, "Failed", "StepFailed", "A step failed with failFast strategy"); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -463,7 +473,9 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				wf.Status.StepStatuses[i].Phase = "Skipped"
 			}
 		}
-		r.setPhase(ctx, wf, "Failed", "StepFailed", "A step failed with stop strategy")
+		if err := r.setPhase(ctx, wf, "Failed", "StepFailed", "A step failed with stop strategy"); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -495,19 +507,12 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				}
 			}
 		}
-		finalPhase := "Succeeded"
-		finalReason := "AllStepsCompleted"
-		finalMsg := "All workflow steps completed"
-		if wf.Status.FailedSteps > 0 && wf.Spec.FailureStrategy == "continueOnError" {
-			finalPhase = "Succeeded"
-			finalReason = "CompletedWithErrors"
-			finalMsg = fmt.Sprintf("%d/%d steps succeeded, %d failed (continueOnError)", wf.Status.CompletedSteps, wf.Status.TotalSteps, wf.Status.FailedSteps)
-		} else if wf.Status.FailedSteps > 0 {
-			finalPhase = "Failed"
-			finalReason = "StepsFailed"
-			finalMsg = fmt.Sprintf("%d/%d steps succeeded, %d failed", wf.Status.CompletedSteps, wf.Status.TotalSteps, wf.Status.FailedSteps)
+		finalPhase, finalReason, finalMsg := completionPhase(wf.Status.CompletedSteps, wf.Status.FailedSteps, wf.Status.TotalSteps, wf.Spec.FailureStrategy)
+		if err := r.setPhase(ctx, wf, finalPhase, finalReason, finalMsg); err != nil {
+			// Requeue: the phase did not persist (stale CRD enum, conflict).
+			// Metrics/gauge updates must not run for a write that failed.
+			return ctrl.Result{}, err
 		}
-		r.setPhase(ctx, wf, finalPhase, finalReason, finalMsg)
 		// Prometheus: workflow duration
 		if wf.Status.StartTime != nil && wf.Status.CompletionTime != nil {
 			dur := wf.Status.CompletionTime.Sub(wf.Status.StartTime.Time).Seconds()
@@ -763,6 +768,28 @@ func (r *WorkflowReconciler) getWorkflowJobs(ctx context.Context, wf *v1alpha1.W
 }
 
 // deleteWorkflowJobs deletes all Jobs for a workflow.
+// jobsToStopOnFailure returns job names of steps still pending/running —
+// completed and failed jobs are preserved as evidence.
+func jobsToStopOnFailure(wf *v1alpha1.Workflow) []string {
+	var jobs []string
+	for i := range wf.Status.StepStatuses {
+		ss := &wf.Status.StepStatuses[i]
+		if (ss.Phase == "Running" || ss.Phase == "Pending" || ss.Phase == "") && ss.JobName != "" {
+			jobs = append(jobs, ss.JobName)
+		}
+	}
+	return jobs
+}
+
+func (r *WorkflowReconciler) stopJobs(ctx context.Context, wf *v1alpha1.Workflow, names []string) {
+	for _, name := range names {
+		job := &batchv1.Job{}
+		job.Name = name
+		job.Namespace = wf.Namespace
+		r.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationBackground))
+	}
+}
+
 func (r *WorkflowReconciler) deleteWorkflowJobs(ctx context.Context, wf *v1alpha1.Workflow) {
 	logger := log.FromContext(ctx)
 	jobList := &batchv1.JobList{}
@@ -1075,7 +1102,10 @@ func (r *WorkflowReconciler) getStepOutputs(ctx context.Context, wf *v1alpha1.Wo
 	return cm.Data
 }
 
-func (r *WorkflowReconciler) setPhase(ctx context.Context, wf *v1alpha1.Workflow, phase, reason, message string) {
+// setPhase writes the phase transition and returns the status-write error:
+// a rejected write (stale CRD missing a phase enum value, transient conflict)
+// must requeue the reconcile, not silently strand the workflow (PR#21 F1).
+func (r *WorkflowReconciler) setPhase(ctx context.Context, wf *v1alpha1.Workflow, phase, reason, message string) error {
 	wf.Status.Phase = phase
 	wf.Status.Message = message
 
@@ -1093,11 +1123,13 @@ func (r *WorkflowReconciler) setPhase(ctx context.Context, wf *v1alpha1.Workflow
 	})
 
 	if err := r.Status().Update(ctx, wf); err != nil {
-		log.FromContext(ctx).Error(err, "Failed to update workflow status")
+		log.FromContext(ctx).Error(err, "Failed to update workflow status", "phase", phase)
+		return err
 	}
 
 	// Mirror every phase transition into the history archive (Spec 24)
 	r.recordWorkflowHistory(ctx, wf)
+	return nil
 }
 
 // updateAgentMetrics reads _metrics from step output and aggregates into the agent's status.
@@ -1323,6 +1355,23 @@ func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1alpha1.Workflow{}).
 		Owns(&batchv1.Job{}).
 		Complete(r)
+}
+
+// completionPhase decides the terminal workflow phase. A run with failed
+// steps never presents as plain "Succeeded" (Stage 1 finding F10): partial
+// failure under continueOnError is CompletedWithErrors; zero successes is
+// Failed regardless of strategy.
+func completionPhase(completed, failed, total int, strategy string) (string, string, string) {
+	switch {
+	case failed == 0:
+		return "Succeeded", "AllStepsCompleted", "All workflow steps completed"
+	case completed == 0:
+		return "Failed", "AllStepsFailed", fmt.Sprintf("0/%d steps succeeded, %d failed", total, failed)
+	case strategy == "continueOnError":
+		return "CompletedWithErrors", "CompletedWithErrors", fmt.Sprintf("%d/%d steps succeeded, %d failed (continueOnError)", completed, total, failed)
+	default:
+		return "Failed", "StepsFailed", fmt.Sprintf("%d/%d steps succeeded, %d failed", completed, total, failed)
+	}
 }
 
 func (r *WorkflowReconciler) resolveLLMProvider(ctx context.Context, providerName string) (*v1alpha1.LLMProvider, string, error) {

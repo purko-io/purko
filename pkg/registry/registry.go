@@ -243,8 +243,28 @@ func discoverMCPTools(serverURL, authToken string) ([]ToolInfo, error) {
 	return nil, fmt.Errorf("streamable-http: %v; sse: %v", err, sseErr)
 }
 
+// streamableEndpoint normalizes a server URL to its streamable-HTTP MCP
+// endpoint: base URLs get /mcp appended, full endpoints pass through.
+func streamableEndpoint(serverURL string) string {
+	u := strings.TrimRight(serverURL, "/")
+	if strings.HasSuffix(u, "/mcp") {
+		return u
+	}
+	return u + "/mcp"
+}
+
+// sseEndpoint derives the legacy SSE endpoint from a server URL.
+func sseEndpoint(serverURL string) string {
+	u := strings.TrimRight(serverURL, "/")
+	if strings.HasSuffix(u, "/sse") {
+		return u
+	}
+	u = strings.TrimSuffix(u, "/mcp")
+	return u + "/sse"
+}
+
 func discoverViaStreamableHTTP(serverURL, authToken string) ([]ToolInfo, error) {
-	endpoint := serverURL + "/mcp"
+	endpoint := streamableEndpoint(serverURL)
 
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -353,7 +373,7 @@ func mcpRequest(endpoint string, payload map[string]interface{}, headers map[str
 }
 
 func discoverViaSSE(serverURL, authToken string) ([]ToolInfo, error) {
-	sseURL := serverURL + "/sse"
+	sseURL := sseEndpoint(serverURL)
 
 	headers := map[string]string{
 		"Accept": "text/event-stream",

@@ -298,6 +298,8 @@ tr:hover td { background: rgba(0, 180, 255, 0.03); }
 .phase-Running::before { animation: pulse-glow 1.5s ease-in-out infinite; }
 .phase-Failed, .phase-Error { background: var(--red-glow); color: var(--red); border: 1px solid rgba(255, 77, 106, 0.15); }
 .phase-Pending { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(255, 176, 32, 0.15); }
+.phase-CompletedWithErrors { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(255, 176, 32, 0.3); }
+.phase-CompletedWithErrors::before { box-shadow: 0 0 6px currentColor; }
 .phase-Skipped { background: rgba(90,106,130,0.1); color: var(--dim); border: 1px solid var(--border); }
 
 /* ── Utility Classes ─────────────────────── */

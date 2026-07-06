@@ -147,5 +147,68 @@ class TestModelTunables(unittest.TestCase):
             del os.environ['PURKO_TEST_BAD_VAR']
 
 
+class TestModelPricing(unittest.TestCase):
+    """Cost must be honest: provider-supplied pricing wins, known models use
+    the table, and unknown models (local ollama etc.) cost $0 — never a
+    fabricated default rate."""
+
+    def setUp(self):
+        import os
+        for var in ('MODEL_PRICE_IN', 'MODEL_PRICE_OUT'):
+            os.environ.pop(var, None)
+
+    tearDown = setUp
+
+    def test_unknown_model_costs_zero(self):
+        pricing = executor.model_pricing('qwen3.5:4b')
+        self.assertEqual(pricing, {'input': 0.0, 'output': 0.0})
+
+    def test_known_model_uses_table(self):
+        pricing = executor.model_pricing('claude-sonnet-4-6')
+        self.assertAlmostEqual(pricing['input'], 3.0 / 1e6)
+
+    def test_env_pricing_overrides(self):
+        import os
+        os.environ['MODEL_PRICE_IN'] = '1.5'
+        os.environ['MODEL_PRICE_OUT'] = '6.0'
+        pricing = executor.model_pricing('claude-sonnet-4-6')
+        self.assertAlmostEqual(pricing['input'], 1.5 / 1e6)
+        self.assertAlmostEqual(pricing['output'], 6.0 / 1e6)
+
+    def test_invalid_env_pricing_ignored(self):
+        import os
+        os.environ['MODEL_PRICE_IN'] = 'free'
+        pricing = executor.model_pricing('qwen3.5:4b')
+        self.assertEqual(pricing, {'input': 0.0, 'output': 0.0})
+
+
+class TestMCPEndpoint(unittest.TestCase):
+    """Server URLs may be base URLs or full /mcp endpoints (F21) — both work."""
+
+    def test_base_url_gets_mcp_appended(self):
+        self.assertEqual(executor.mcp_endpoint('http://x:8000'), 'http://x:8000/mcp')
+
+    def test_trailing_slash_normalized(self):
+        self.assertEqual(executor.mcp_endpoint('http://x:8000/'), 'http://x:8000/mcp')
+
+    def test_full_endpoint_passes_through(self):
+        self.assertEqual(executor.mcp_endpoint('http://x:8000/mcp'), 'http://x:8000/mcp')
+
+
+class TestAPIFailureOutput(unittest.TestCase):
+    """A configured-but-unreachable model API must produce an error output
+    (step fails loudly), never demo-mode fake success (F24)."""
+
+    def test_connection_error_is_error_output(self):
+        out = executor.api_failure_output('connection refused to http://x:11499/v1', 'doomed')
+        self.assertIn('error', out)
+        self.assertEqual(out['step'], 'doomed')
+        self.assertNotIn('mode', out)
+
+    def test_error_output_exits_nonzero(self):
+        out = executor.api_failure_output('boom', 's')
+        self.assertEqual(executor.output_exit_code(out), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

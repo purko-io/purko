@@ -127,7 +127,7 @@ function viewAgent(name) {
     let condsHTML = '';
     if (st.conditions && st.conditions.length > 0) {
       condsHTML = `<div class="detail-grid" style="margin-top:12px">
-        <div class="label">Conditions</div>
+        <div class="label">Conditions <span style="font-size:9px;color:var(--dim);font-weight:400">(computed health — not configurable)</span></div>
         <div>${conditionsHTML(st.conditions)}</div>
       </div>`;
     }
@@ -201,6 +201,7 @@ function editAgent(name) {
     const sp = a.spec;
     const currentTools = (sp.tools || []).map(t => t.name);
     const image = sp.runtime && sp.runtime.image ? sp.runtime.image : 'localhost/purko-executor:latest';
+    const gr = sp.guardrails || {};
     const group = a.metadata.labels && a.metadata.labels['app.kubernetes.io/component'] || 'general';
 
     const toolGroups = {};
@@ -238,11 +239,11 @@ function editAgent(name) {
           <label>Temperature</label>
           <div class="range-group"><input type="range" id="edit-temp" min="0" max="2" step="0.1" value="${sp.model.temperature||0.2}" oninput="document.getElementById('edit-temp-val').textContent=this.value"><span id="edit-temp-val" class="mono">${sp.model.temperature||0.2}</span></div>
           <label>Autonomy</label>
-          <select id="edit-autonomy">
+          <div><select id="edit-autonomy">
             <option value="restricted" ${sp.autonomyLevel==='restricted'?'selected':''}>Restricted</option>
             <option value="supervised" ${sp.autonomyLevel==='supervised'?'selected':''}>Supervised</option>
             <option value="full" ${sp.autonomyLevel==='full'?'selected':''}>Full</option>
-          </select>
+          </select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
           <label>Image</label>
           <select id="edit-image">
             <option value="localhost/purko-executor:latest" ${image.includes('latest')&&!image.includes('git')&&!image.includes('dev')?'selected':''}>Base</option>
@@ -255,6 +256,16 @@ function editAgent(name) {
           </select>
           <label>Role</label><input id="edit-role" value="${esc(sp.role||'')}" spellcheck="false">
           <label>System Prompt</label><textarea id="edit-prompt" rows="5">${esc(sp.systemPrompt||'')}</textarea>
+          <label>Guardrails</label>
+          <div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Max iterations</div><input type="number" id="edit-gr-iter" min="0" value="${gr.maxIterations||''}" placeholder="e.g. 15"></div>
+              <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Cost limit USD</div><input type="number" id="edit-gr-cost" min="0" step="0.5" value="${gr.costLimitUSD||''}" placeholder="e.g. 8"></div>
+              <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Max execution time</div><input id="edit-gr-time" value="${esc(gr.maxExecutionTime||'')}" placeholder="e.g. 5m" spellcheck="false"></div>
+              <div style="flex:1;min-width:120px"><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Rollback on failure</div><select id="edit-gr-rollback"><option value="false" ${gr.rollbackOnFailure?'':'selected'}>No</option><option value="true" ${gr.rollbackOnFailure?'selected':''}>Yes</option></select></div>
+            </div>
+            <div style="font-size:10px;color:var(--dim);margin-top:4px">Safety caps enforced by the executor. Empty fields keep their current values.</div>
+          </div>
           <label>MCP Tools</label><div id="edit-tools">${toolsHTML}</div>
         </div>
         <div class="form-actions">
@@ -281,6 +292,10 @@ function saveAgent(name) {
     group: document.getElementById('edit-group').value,
     systemPrompt: document.getElementById('edit-prompt').value,
     tools,
+    maxIterations: parseInt(document.getElementById('edit-gr-iter').value) || 0,
+    costLimit: parseFloat(document.getElementById('edit-gr-cost').value) || 0,
+    maxExecutionTime: document.getElementById('edit-gr-time').value.trim(),
+    rollbackOnFailure: document.getElementById('edit-gr-rollback').value === 'true',
   };
   fetch('/api/update/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
@@ -322,7 +337,7 @@ function showCreateAgentForm() {
         <label>Model</label>
         <select id="ca-model"><option value="claude-sonnet-4-6">Claude Sonnet 4.6</option><option value="claude-opus-4-6">Claude Opus 4.6</option><option value="claude-haiku-4-5">Claude Haiku 4.5</option><option value="gpt-4o">GPT-4o</option></select>
         <label>Temperature</label><div class="range-group"><input type="range" id="ca-temp" min="0" max="2" step="0.1" value="0.1" oninput="document.getElementById('ca-temp-val').textContent=this.value"><span id="ca-temp-val" class="mono">0.1</span></div>
-        <label>Autonomy</label><select id="ca-autonomy"><option value="restricted">Restricted</option><option value="supervised">Supervised</option><option value="full">Full</option></select>
+        <label>Autonomy</label><div><select id="ca-autonomy"><option value="restricted">Restricted</option><option value="supervised">Supervised</option><option value="full">Full</option></select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
         <label>Memory</label><select id="ca-memory"><option value="buffer">Buffer</option><option value="summary">Summary</option><option value="vector">Vector</option><option value="none">None</option></select>
         <label>Image</label><select id="ca-image"><option value="localhost/purko-executor:latest">Base</option><option value="localhost/purko-executor:git">Git</option><option value="localhost/purko-executor:dev">Dev</option></select>
         <label>Group</label>

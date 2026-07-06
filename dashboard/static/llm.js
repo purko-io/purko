@@ -74,8 +74,8 @@ const LLM_PRESETS = {
   'gemini': { name: 'gemini', model: 'gemini-2.5-pro', secretKey: 'credentials.json', secretPlaceholder: 'gcp-credentials', models: 'gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash', hint: 'Google Gemini via Vertex AI. Same GCP credentials as Claude. Set projectId and region in config.' },
   'anthropic': { name: 'anthropic', model: 'claude-sonnet-4-6', secretKey: 'api-key', secretPlaceholder: 'anthropic-api-key', models: 'claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5', hint: 'Direct Anthropic API. Requires API key in a Secret.' },
   'openai': { name: 'openai', model: 'gpt-4o', secretKey: 'api-key', secretPlaceholder: 'openai-api-key', models: 'gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini', hint: 'Requires OpenAI API key in a Secret.' },
-  'ollama': { name: 'ollama', model: 'llama3.1:8b', secretKey: '', secretPlaceholder: '', models: 'llama3.1:8b, llama3.1:70b, mistral, codellama, qwen2.5', hint: 'No credentials needed. Set endpoint URL in config (e.g. http://ollama:11434).' },
-  'custom': { name: 'custom', model: '', secretKey: 'api-key', secretPlaceholder: 'custom-api-key', models: '', hint: 'Custom OpenAI-compatible endpoint. Set base URL in config.' },
+  'ollama': { name: 'ollama', model: 'qwen3:8b', secretKey: '', secretPlaceholder: '', models: '', modelNote: 'use a model from `ollama list` on your Ollama host', endpoint: 'http://ollama.ai-agents:11434/v1', endpointRequired: true, hint: 'No credentials needed. Endpoint is required — the OpenAI-compatible URL of your Ollama server as reachable from inside the cluster (append /v1).' },
+  'custom': { name: 'custom', model: '', secretKey: 'api-key', secretPlaceholder: 'custom-api-key', models: '', endpoint: '', endpointRequired: true, endpointPlaceholder: 'https://openrouter.ai/api/v1', hint: 'Custom OpenAI-compatible endpoint. Endpoint base URL is required.' },
 };
 
 function showAddLLMForm() {
@@ -97,6 +97,11 @@ function showAddLLMForm() {
       <div>
         <input id="llm-model" placeholder="model name" spellcheck="false">
         <div id="llm-model-hint" style="font-size:10px;color:var(--dim);margin-top:4px"></div>
+      </div>
+      <label>Endpoint</label>
+      <div>
+        <input id="llm-endpoint" placeholder="(optional — provider default)" spellcheck="false">
+        <div id="llm-endpoint-hint" style="font-size:10px;color:var(--dim);margin-top:4px"></div>
       </div>
       <label>Set as Default</label><select id="llm-default"><option value="false">No</option><option value="true">Yes</option></select>
       <label>Credentials</label>
@@ -129,8 +134,13 @@ function updateLLMFormPreset() {
   document.getElementById('llm-model').value = preset.model || '';
   document.getElementById('llm-secret').placeholder = preset.secretPlaceholder || 'secret name';
   document.getElementById('llm-key').value = preset.secretKey || '';
-  document.getElementById('llm-model-hint').textContent = preset.models ? 'Available: ' + preset.models : '';
+  document.getElementById('llm-model-hint').textContent = preset.models ? 'Available: ' + preset.models : (preset.modelNote || '');
   document.getElementById('llm-hint').textContent = preset.hint || '';
+
+  const endpointEl = document.getElementById('llm-endpoint');
+  endpointEl.value = preset.endpoint || '';
+  endpointEl.placeholder = preset.endpointPlaceholder || (preset.endpointRequired ? 'http://host:port/v1' : '(optional — provider default)');
+  document.getElementById('llm-endpoint-hint').textContent = preset.endpointRequired ? 'Required for this provider type' : '';
 
   // Hide credentials for ollama
   const credsSection = document.getElementById('llm-creds-section');
@@ -150,6 +160,7 @@ function createLLMProvider() {
     name: document.getElementById('llm-name').value.trim(),
     type: type,
     model: document.getElementById('llm-model').value.trim(),
+    endpoint: document.getElementById('llm-endpoint').value.trim(),
     default: document.getElementById('llm-default').value === 'true',
   };
 
@@ -174,6 +185,7 @@ function createLLMProvider() {
 
   if (!body.name) { showResult('llm-result', 'err', 'Name required'); return; }
   if (!body.model) { showResult('llm-result', 'err', 'Model required'); return; }
+  if (!body.endpoint && (LLM_PRESETS[type] || {}).endpointRequired) { showResult('llm-result', 'err', 'Endpoint required for type "' + type + '"'); return; }
 
   fetch('/api/llm/provider', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
