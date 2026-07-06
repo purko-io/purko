@@ -61,6 +61,13 @@ spec:
             - name: PURKO_LICENSE
               value: {{ .Values.licensing.tier | quote }}
             {{- end }}
+            {{- if .Values.executor.image }}
+            # Default step-executor image for agents without spec.runtime.image;
+            # without this, fresh installs cannot run workflows (localhost dev
+            # image fallback).
+            - name: PURKO_EXECUTOR_IMAGE
+              value: {{ .Values.executor.image | quote }}
+            {{- end }}
             {{- if .Values.operator.history.enabled }}
             - name: PURKO_HISTORY_ENABLED
               value: "true"

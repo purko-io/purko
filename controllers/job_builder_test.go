@@ -238,3 +238,41 @@ func TestBuildStepJobModelPricingFromProvider(t *testing.T) {
 		}
 	})
 }
+
+// Fresh OSS installs cannot run workflows: the default executor image is
+// a localhost dev build that exists on no real cluster (Stage 2 F36). The
+// chart's executor.image must reach the controller via env.
+func TestBuildStepJobExecutorImageFromEnv(t *testing.T) {
+	wf := buildTestJob(t)
+	step := v1alpha1.WorkflowStep{Name: "s1"}
+	input := json.RawMessage(`{"task":"x"}`)
+	agent := &v1alpha1.Agent{}
+	agent.Name = "a1"
+
+	t.Run("env overrides the localhost default", func(t *testing.T) {
+		t.Setenv("PURKO_EXECUTOR_IMAGE", "ghcr.io/purko-io/purko-executor:v0.3.1")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		if got := job.Spec.Template.Spec.Containers[0].Image; got != "ghcr.io/purko-io/purko-executor:v0.3.1" {
+			t.Errorf("image = %q, want env override", got)
+		}
+	})
+
+	t.Run("agent runtime image still wins over env", func(t *testing.T) {
+		t.Setenv("PURKO_EXECUTOR_IMAGE", "ghcr.io/purko-io/purko-executor:v0.3.1")
+		a := &v1alpha1.Agent{}
+		a.Name = "a1"
+		a.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: "custom/executor:dev"}
+		job := buildStepJob(wf, step, a, "run1", input, nil, "", nil, "")
+		if got := job.Spec.Template.Spec.Containers[0].Image; got != "custom/executor:dev" {
+			t.Errorf("image = %q, want agent runtime image", got)
+		}
+	})
+
+	t.Run("localhost default without env", func(t *testing.T) {
+		t.Setenv("PURKO_EXECUTOR_IMAGE", "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		if got := job.Spec.Template.Spec.Containers[0].Image; got != defaultExecutorImage {
+			t.Errorf("image = %q, want %q", got, defaultExecutorImage)
+		}
+	})
+}
