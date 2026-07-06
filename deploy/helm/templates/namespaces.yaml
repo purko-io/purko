@@ -1,23 +1,26 @@
 {{- /*
-  Both namespaces carry helm.sh/resource-policy: keep (purko-io/purko#6):
-  - uninstall/upgrade never deletes them (previously `helm uninstall`
-    deleted purko-system and ai-agents with all user resources in them)
-  - coexists safely with `helm install --create-namespace`
+  Namespace lifecycle (purko-io/purko#6, #20, and the v0.3.0 fresh-install
+  fix):
+  - The RELEASE namespace ({{ .Values.namespace }}) is NOT templated here.
+    `helm install --create-namespace` owns it; a chart-rendered Namespace
+    manifest cannot adopt the bare namespace that flag creates, which broke
+    every fresh-cluster install (namespaces "purko-system" already exists).
+    Helm never deletes the release namespace on uninstall, so user
+    resources there survive uninstall -> reinstall.
+  - The AGENT namespace stays chart-managed with helm.sh/resource-policy:
+    keep + pre-stamped ownership metadata: uninstall never deletes it, and
+    reinstalls under the same release name adopt it cleanly.
+  Reinstalling under a DIFFERENT release name over a kept agent namespace
+  still fails by design (ambiguous ownership) — delete or re-annotate first.
 */}}
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ .Values.namespace }}
-  labels:
-    app.kubernetes.io/part-of: purko
-  annotations:
-    helm.sh/resource-policy: keep
----
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.agentNamespace }}
   labels:
     app.kubernetes.io/part-of: purko
+    app.kubernetes.io/managed-by: Helm
   annotations:
     helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
