@@ -52,8 +52,13 @@ func buildJobName(workflowName, stepName, runID string) string {
 func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1alpha1.Agent, runID string, stepInput json.RawMessage, inputFromEnvs []corev1.EnvVar, mcpServersJSON string, llmProvider *v1alpha1.LLMProvider, llmAPIKey string) *batchv1.Job {
 	jobName := buildJobName(wf.Name, step.Name, runID)
 
-	// Determine image — use agent's specified image, fall back to default executor
+	// Determine image: agent runtime image > chart-provided PURKO_EXECUTOR_IMAGE
+	// > localhost dev default. Without the env wiring, fresh installs from the
+	// published chart could not run any workflow (F36).
 	image := defaultExecutorImage
+	if envImage := os.Getenv("PURKO_EXECUTOR_IMAGE"); envImage != "" {
+		image = envImage
+	}
 	if agent.Spec.Runtime != nil && agent.Spec.Runtime.Image != "" {
 		image = agent.Spec.Runtime.Image
 	}
