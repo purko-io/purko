@@ -170,7 +170,7 @@ function buildDAGGroups(steps) {
 // ── MCP Tools (shared for agents create/edit + MCP tab) ─────────────
 
 function loadMCPToolsList() {
-  fetch('/api/mcp/tools').then(r => r.json()).then(d => {
+  return fetch('/api/mcp/tools').then(r => r.json()).then(d => {
     state.mcpTools = [];
     for (const server of (d.servers || [])) {
       const src = server.name.toLowerCase();

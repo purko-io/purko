@@ -70,3 +70,62 @@ func TestUpdateAgentMergesGuardrails(t *testing.T) {
 		t.Errorf("customKey = %v, want preserved", g["customKey"])
 	}
 }
+
+// The agent forms' image dropdown hardcoded dev-only localhost images and
+// silently pinned spec.runtime.image on every edit — breaking all runs on
+// real clusters (Stage 2 F41). Empty image now CLEARS the pin (operator
+// default applies); omitted image leaves it untouched.
+func TestUpdateAgentImageSemantics(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("AddToScheme: %v", err)
+	}
+
+	newAgent := func(image string) *v1alpha1.Agent {
+		a := &v1alpha1.Agent{}
+		a.Name = "a1"
+		a.Namespace = "ai-agents"
+		a.Spec.Model.Provider = "ollama"
+		a.Spec.Model.Name = "m"
+		if image != "" {
+			a.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: image}
+		}
+		return a
+	}
+	update := func(t *testing.T, a *v1alpha1.Agent, body string) *v1alpha1.Agent {
+		t.Helper()
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(a).Build()
+		s := &Server{Client: c}
+		req := httptest.NewRequest(http.MethodPost, "/api/update/agent", strings.NewReader(body))
+		s.handleUpdateAgent(httptest.NewRecorder(), req)
+		got := &v1alpha1.Agent{}
+		if err := c.Get(context.Background(), client.ObjectKey{Name: "a1", Namespace: "ai-agents"}, got); err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		return got
+	}
+
+	t.Run("empty image clears the pin", func(t *testing.T) {
+		got := update(t, newAgent("localhost/purko-executor:latest"),
+			`{"name":"a1","namespace":"ai-agents","provider":"ollama","model":"m","image":""}`)
+		if got.Spec.Runtime != nil && got.Spec.Runtime.Image != "" {
+			t.Errorf("runtime image = %q, want cleared", got.Spec.Runtime.Image)
+		}
+	})
+
+	t.Run("omitted image leaves pin untouched", func(t *testing.T) {
+		got := update(t, newAgent("custom/executor:v1"),
+			`{"name":"a1","namespace":"ai-agents","provider":"ollama","model":"m"}`)
+		if got.Spec.Runtime == nil || got.Spec.Runtime.Image != "custom/executor:v1" {
+			t.Errorf("runtime = %+v, want untouched custom/executor:v1", got.Spec.Runtime)
+		}
+	})
+
+	t.Run("explicit image sets the pin", func(t *testing.T) {
+		got := update(t, newAgent(""),
+			`{"name":"a1","namespace":"ai-agents","provider":"ollama","model":"m","image":"custom/executor:v2"}`)
+		if got.Spec.Runtime == nil || got.Spec.Runtime.Image != "custom/executor:v2" {
+			t.Errorf("runtime = %+v, want custom/executor:v2", got.Spec.Runtime)
+		}
+	})
+}

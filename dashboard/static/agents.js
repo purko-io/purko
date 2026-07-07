@@ -196,11 +196,11 @@ function deleteAgent(name) {
 
 function editAgent(name) {
   agentFormOpen = true;
-  fetch('/api/agent/' + name).then(r => r.json()).then(d => {
+  Promise.all([fetch('/api/agent/' + name).then(r => r.json()), loadMCPToolsList()]).then(([d]) => {
     const a = d.agent;
     const sp = a.spec;
     const currentTools = (sp.tools || []).map(t => t.name);
-    const image = sp.runtime && sp.runtime.image ? sp.runtime.image : 'localhost/purko-executor:latest';
+    const pinnedImage = sp.runtime && sp.runtime.image ? sp.runtime.image : '';
     const gr = sp.guardrails || {};
     const group = a.metadata.labels && a.metadata.labels['app.kubernetes.io/component'] || 'general';
 
@@ -245,11 +245,14 @@ function editAgent(name) {
             <option value="full" ${sp.autonomyLevel==='full'?'selected':''}>Full</option>
           </select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
           <label>Image</label>
-          <select id="edit-image">
-            <option value="localhost/purko-executor:latest" ${image.includes('latest')&&!image.includes('git')&&!image.includes('dev')?'selected':''}>Base</option>
-            <option value="localhost/purko-executor:git" ${image.includes('git')?'selected':''}>Git</option>
-            <option value="localhost/purko-executor:dev" ${image.includes('dev')?'selected':''}>Dev</option>
-          </select>
+          <div>
+            <select id="edit-image" onchange="document.getElementById('edit-image-custom').style.display=this.value==='__custom__'?'':'none'">
+              <option value="" ${!pinnedImage?'selected':''}>Default (operator executor image)</option>
+              <option value="__custom__" ${pinnedImage?'selected':''}>Custom image&hellip;</option>
+            </select>
+            <input id="edit-image-custom" value="${esc(pinnedImage)}" placeholder="registry/image:tag" spellcheck="false" style="margin-top:6px;${pinnedImage?'':'display:none'}">
+            <div style="font-size:10px;color:var(--dim);margin-top:4px">Default runs the executor image the operator ships. Pin a custom image only for specialized runtimes.</div>
+          </div>
           <label>Group</label>
           <select id="edit-group">
             ${['general','platform-health','incident-management','observability','security-compliance','sdlc','ci-cd','capacity-cost'].map(g => `<option value="${g}" ${group===g?'selected':''}>${g}</option>`).join('')}
@@ -288,7 +291,7 @@ function saveAgent(name) {
     temperature: parseFloat(document.getElementById('edit-temp').value),
     autonomy: document.getElementById('edit-autonomy').value,
     role: document.getElementById('edit-role').value,
-    image: document.getElementById('edit-image').value,
+    image: document.getElementById('edit-image').value === '__custom__' ? document.getElementById('edit-image-custom').value.trim() : '',
     group: document.getElementById('edit-group').value,
     systemPrompt: document.getElementById('edit-prompt').value,
     tools,
@@ -307,6 +310,11 @@ function saveAgent(name) {
 
 function showCreateAgentForm() {
   agentFormOpen = true;
+  // Fresh tool list — servers connected since page load must show (F39)
+  loadMCPToolsList().then(renderCreateAgentForm);
+}
+
+function renderCreateAgentForm() {
   const toolGroups = {};
   for (const t of state.mcpTools) {
     const key = t.source;
@@ -339,7 +347,7 @@ function showCreateAgentForm() {
         <label>Temperature</label><div class="range-group"><input type="range" id="ca-temp" min="0" max="2" step="0.1" value="0.1" oninput="document.getElementById('ca-temp-val').textContent=this.value"><span id="ca-temp-val" class="mono">0.1</span></div>
         <label>Autonomy</label><div><select id="ca-autonomy"><option value="restricted">Restricted</option><option value="supervised">Supervised</option><option value="full">Full</option></select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
         <label>Memory</label><select id="ca-memory"><option value="buffer">Buffer</option><option value="summary">Summary</option><option value="vector">Vector</option><option value="none">None</option></select>
-        <label>Image</label><select id="ca-image"><option value="localhost/purko-executor:latest">Base</option><option value="localhost/purko-executor:git">Git</option><option value="localhost/purko-executor:dev">Dev</option></select>
+        <label>Image</label><div><select id="ca-image" onchange="document.getElementById('ca-image-custom').style.display=this.value==='__custom__'?'':'none'"><option value="">Default (operator executor image)</option><option value="__custom__">Custom image&hellip;</option></select><input id="ca-image-custom" placeholder="registry/image:tag" spellcheck="false" style="display:none;margin-top:6px"></div>
         <label>Group</label>
         <select id="ca-group"><option value="general">General</option><option value="platform-health">Platform Health</option><option value="incident-management">Incident Management</option><option value="observability">Observability</option><option value="security-compliance">Security</option><option value="sdlc">SDLC</option><option value="ci-cd">CI/CD</option><option value="capacity-cost">Capacity & Cost</option></select>
         <label>Role</label><input id="ca-role" placeholder="e.g. cluster-health-assessor" spellcheck="false">
@@ -368,7 +376,7 @@ function createAgent() {
     autonomy: document.getElementById('ca-autonomy').value,
     memory: document.getElementById('ca-memory').value,
     role: document.getElementById('ca-role').value,
-    image: document.getElementById('ca-image').value,
+    image: document.getElementById('ca-image').value === '__custom__' ? document.getElementById('ca-image-custom').value.trim() : '',
     group: document.getElementById('ca-group').value,
     costLimit: parseFloat(document.getElementById('ca-cost').value),
     maxIterations: parseInt(document.getElementById('ca-iter').value),
