@@ -328,7 +328,7 @@ type CreateAgentRequest struct {
 	Autonomy          string   `json:"autonomy"`
 	Memory            string   `json:"memory"`
 	Role              string   `json:"role"`
-	Image             string   `json:"image"`
+	Image             *string  `json:"image"`
 	Group             string   `json:"group"`
 	CostLimit         float64  `json:"costLimit"`
 	MaxIterations     int      `json:"maxIterations"`
@@ -410,8 +410,8 @@ func (s *Server) handleCreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	agent.Spec.Role = req.Role
 	agent.Spec.SystemPrompt = req.SystemPrompt
-	if req.Image != "" {
-		agent.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: req.Image}
+	if req.Image != nil && *req.Image != "" {
+		agent.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: *req.Image}
 	}
 	// Set guardrails if cost limit or iterations specified
 	if req.CostLimit > 0 || req.MaxIterations > 0 || req.MaxExecutionTime != "" || req.RollbackOnFailure != nil {
@@ -612,11 +612,19 @@ func (s *Server) handleUpdateAgent(w http.ResponseWriter, r *http.Request) {
 	agent.Spec.AutonomyLevel = req.Autonomy
 	agent.Spec.Role = req.Role
 	agent.Spec.SystemPrompt = req.SystemPrompt
-	if req.Image != "" {
-		if agent.Spec.Runtime == nil {
-			agent.Spec.Runtime = &v1alpha1.RuntimeSpec{}
+	// Image semantics (F41): omitted = untouched; empty = clear the pin so
+	// the operator's executor image applies; value = explicit pin.
+	if req.Image != nil {
+		if *req.Image == "" {
+			if agent.Spec.Runtime != nil {
+				agent.Spec.Runtime.Image = ""
+			}
+		} else {
+			if agent.Spec.Runtime == nil {
+				agent.Spec.Runtime = &v1alpha1.RuntimeSpec{}
+			}
+			agent.Spec.Runtime.Image = *req.Image
 		}
-		agent.Spec.Runtime.Image = req.Image
 	}
 	if req.Group != "" {
 		if agent.Labels == nil {

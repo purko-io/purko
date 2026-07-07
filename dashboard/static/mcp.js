@@ -138,7 +138,7 @@ function createMCPServer() {
     .then(r => r.json())
     .then(d => {
       if (d.error) showResult('mcp-result', 'err', 'Error: ' + d.error);
-      else { showResult('mcp-result', 'ok', connect ? `Connected "${d.name}" — discovering tools...` : `MCPServer "${d.name}" created!`); setTimeout(loadMCPServers, 3000); }
+      else { showResult('mcp-result', 'ok', connect ? `Connected "${d.name}" — discovering tools...` : `MCPServer "${d.name}" created!`); setTimeout(() => { loadMCPToolsList(); loadMCPServers(); }, 3000); }
     });
 }
 
