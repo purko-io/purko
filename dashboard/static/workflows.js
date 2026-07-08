@@ -566,7 +566,7 @@ function openFollowUp(stepName) {
     </div>
     <div style="margin:12px 0">
       <div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">What do you want to do with this?</div>
-      <input id="followup-intent" type="text" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font)" placeholder="e.g. Create GitHub issues for each finding, Fix these bugs, Send summary to Slack..." spellcheck="false" autofocus>
+      <input id="followup-intent" type="text" style="width:100%;background:var(--inset-deep);border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font)" placeholder="e.g. Create GitHub issues for each finding, Fix these bugs, Send summary to Slack..." spellcheck="false" autofocus>
     </div>
     <div class="form-actions">
       <button class="btn btn--primary" onclick="submitFollowUp()">Design Workflow</button>

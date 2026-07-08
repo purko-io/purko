@@ -358,6 +358,7 @@ function renderCreateAgentForm() {
       </div>
       <div class="form-actions">
         <button class="btn btn--primary" onclick="createAgent()">Deploy Agent</button>
+        <button class="btn btn--secondary" onclick="router.go('agents')">Cancel</button>
       </div>
       <div id="ca-result"></div>
     </div>

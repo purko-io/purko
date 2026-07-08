@@ -36,3 +36,8 @@ func proFeatures() map[string]bool {
 func (s *Server) createIntentWorkflow(ctx context.Context, ns string, payload NormalizedPayload) string {
 	return ""
 }
+
+// historyRetentionDays reports the community retention window. HARD-CODED
+// like proFeatures: the community binary carries no licensing package, and
+// the value must match the community pruner's 7-day window.
+func historyRetentionDays() int { return 7 }

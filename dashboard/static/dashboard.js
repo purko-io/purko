@@ -18,7 +18,8 @@ function render_dashboard(d) {
   Promise.all([
     fetch('/api/agents').then(r => r.json()),
     fetch('/api/llm/providers').then(r => r.json()).catch(() => ({ providers: [] })),
-  ]).then(([agents, provResp]) => {
+    fetch('/api/history/runs?limit=100').then(r => (r.ok ? r.json() : null)).catch(() => null),
+  ]).then(([agents, provResp, histRuns]) => {
     const providerCount = (provResp.providers || []).length;
     const promises = agents.map(a => fetch('/api/agent/' + a.name).then(r => r.json()));
     Promise.all(promises).then(details => {
@@ -44,6 +45,10 @@ function render_dashboard(d) {
       const mcpCount = state.mcpTools.length;
       const mcpServers = new Set(state.mcpTools.map(t => t.source)).size;
 
+      const hb = historyBuckets(histRuns, 24, 8);
+      const done = d.wfSucceeded + d.wfFailed;
+      const okPct = done > 0 ? Math.round((d.wfSucceeded / done) * 100) : null;
+
       el.innerHTML = `
         ${providerCount === 0 ? `<div class="panel" style="border-color:var(--amber);margin-bottom:20px;display:flex;align-items:center;gap:12px">
           <span style="font-size:18px">&#x26A0;&#xFE0F;</span>
@@ -54,34 +59,38 @@ function render_dashboard(d) {
           <button class="btn btn--primary btn--sm" style="flex-shrink:0" onclick="router.go('llm')">Configure</button>
         </div>` : ''}
         <div class="cards">
-          <div class="card card--blue">
+          <div class="card card--insight card--blue">
+            <div class="card-top"><span class="card-label">Agents</span></div>
             <div class="card-value">${d.agentCount}</div>
-            <div class="card-label">Agents</div>
-            <div class="card-sub">${d.agentReady} Ready</div>
+            <div class="card-sub">${d.agentReady} ready</div>
           </div>
-          <div class="card card--purple">
+          <div class="card card--insight card--purple">
+            <div class="card-top"><span class="card-label">Workflows</span></div>
             <div class="card-value">${d.workflowCount}</div>
-            <div class="card-label">Workflows</div>
-            <div class="card-sub">${d.wfRunning} Running</div>
+            <div class="card-sub">${d.wfRunning} running</div>
+            ${sparklineSVG(hb.counts, '--purple')}
           </div>
-          <div class="card card--green">
+          <div class="card card--insight card--green">
+            <div class="card-top"><span class="card-label">MCP Servers</span></div>
             <div class="card-value">${mcpServers}</div>
-            <div class="card-label">MCP Servers</div>
             <div class="card-sub">${mcpCount} tools</div>
           </div>
-          <div class="card card--amber">
+          <div class="card card--insight card--amber">
+            <div class="card-top"><span class="card-label">Total Cost</span>${totalCost === 0 && totalInv > 0 ? '<span class="card-delta card-delta--flat">$0 · local</span>' : ''}</div>
             <div class="card-value">$${totalCost.toFixed(2)}</div>
-            <div class="card-label">Total Cost</div>
-            <div class="card-sub">${(totalTokens/1000).toFixed(0)}K tokens</div>
+            <div class="card-sub">${(totalTokens / 1000).toFixed(1)}K tokens · ${totalInv} invocations</div>
           </div>
-          <div class="card card--green">
-            <div class="card-value">${d.wfSucceeded}</div>
-            <div class="card-label">Succeeded</div>
+          <div class="card card--insight card--green">
+            <div class="card-top"><span class="card-label">Succeeded</span>${okPct !== null ? `<span class="card-delta ${okPct >= 50 ? 'card-delta--up' : 'card-delta--flat'}">${okPct}%</span>` : ''}</div>
+            <div class="card-value">${d.wfSucceeded}${done > 0 ? `<span class="card-frac"> / ${done}</span>` : ''}</div>
+            <div class="card-sub">${d.wfFailed} failed</div>
+            ${sparklineSVG(hb.ok, '--green')}
           </div>
-          ${d.wfFailed > 0 ? `<div class="card card--red"><div class="card-value">${d.wfFailed}</div><div class="card-label">Failed</div></div>` : ''}
+          ${d.wfFailed > 0 ? `<div class="card card--insight card--red"><div class="card-top"><span class="card-label">Failed</span></div><div class="card-value">${d.wfFailed}</div></div>` : ''}
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
+        ${hasFeature('autonomy') ? '' : upgradeStrip('Shu-Ha-Ri Autonomy', 'agents earn trust from their track record.')}
+        <div style="display:grid;grid-template-columns:${hasFeature('autonomy') ? '1fr 1fr' : '1fr'};gap:20px;margin-bottom:28px">
           ${hasFeature('autonomy') ? `<div class="panel" style="margin-top:0">
             <h3>Shu-Ha-Ri Distribution</h3>
             <div style="display:flex;gap:20px;margin-top:14px">
@@ -96,12 +105,22 @@ function render_dashboard(d) {
                 <div class="progress-fill shr-ri" style="width:${d.agentCount ? (shr.ri/d.agentCount*100) : 0}%"></div>
               </div>
             </div>
-          </div>` : upgradeCard('Shu-Ha-Ri Autonomy', 'Agents earn autonomy automatically — supervised to trusted, with promotion and demotion driven by their track record.')}
+          </div>` : ''}
           <div class="panel" style="margin-top:0">
             <h3>Top Agents by Cost</h3>
-            ${topAgents.length > 0 ? `<table style="margin-top:10px"><thead><tr><th>Agent</th><th>Cost</th><th>Invocations</th></tr></thead><tbody>
-              ${topAgents.slice(0, 5).map(a => `<tr><td><span class="clickable" onclick="router.go('agents',{type:'agent',name:'${a.name}'})">${a.name}</span></td><td class="mono">$${a.cost.toFixed(4)}</td><td>${a.inv}</td></tr>`).join('')}
-            </tbody></table>` : '<div class="empty" style="padding:20px">No metrics yet</div>'}
+            <div id="top-agents-body">${topAgents.length > 0 ? `<table style="margin-top:10px"><thead><tr><th>Agent</th><th style="width:45%">Cost share</th><th style="text-align:right">Invocations</th></tr></thead><tbody>
+              ${topAgents.slice(0, 5).map(a => {
+                const maxCost = topAgents[0].cost;
+                const maxInv = Math.max(...topAgents.map(x => x.inv));
+                const share = maxCost > 0 ? (a.cost / maxCost) * 100 : (maxInv > 0 ? (a.inv / maxInv) * 100 : 0);
+                return `<tr>
+                  <td><span class="clickable" onclick="router.go('agents',{type:'agent',name:'${a.name}'})">${a.name}</span></td>
+                  <td><span class="mono" style="font-size:11px">$${a.cost.toFixed(4)}</span><div class="costbar"><span style="width:${share.toFixed(0)}%"></span></div></td>
+                  <td class="mono" style="text-align:right">${a.inv}</td>
+                </tr>`;
+              }).join('')}
+              ${topAgents.length < 3 ? '<tr><td colspan="3" style="color:var(--dim);font-size:12px;padding-top:12px">Run more workflows to rank agents by spend &rarr;</td></tr>' : ''}
+            </tbody></table>` : '<div class="empty" style="padding:20px">No metrics yet</div>'}</div>
           </div>
         </div>
 
@@ -116,7 +135,7 @@ function render_dashboard(d) {
               ${d.workflows.slice(0, 10).map(w => `<tr>
                 <td><span class="clickable" onclick="router.go('workflows',{type:'workflow',name:'${w.name}'})">${w.name}</span></td>
                 <td>${phaseHTML(w.phase)}</td>
-                <td>${w.completedSteps}/${w.totalSteps}</td>
+                <td>${w.completedSteps}/${w.totalSteps}${w.failedSteps > 0 ? ` <span class="tag tag--amber" style="font-size:9px">${w.failedSteps} failed</span>` : ''}</td>
                 <td class="mono">${w.duration || '-'}</td>
                 <td class="mono">${shortAge(w.age)}</td>
               </tr>`).join('')}
