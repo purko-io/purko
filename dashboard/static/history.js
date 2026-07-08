@@ -54,6 +54,7 @@ function loadHistoryRuns() {
       </div>
       ${runs.length ? `<table><thead><tr><th>Name</th><th>Namespace</th><th>Phase</th><th>Steps</th><th>Duration</th><th>Started</th></tr></thead><tbody>${rowsHTML}</tbody></table>`
         : '<div class="empty">No archived runs yet — history is recorded as workflows execute.</div>'}
+      ${retentionFooter()}
     `;
   });
 }
@@ -138,4 +139,16 @@ function loadHistoryTools(stepId) {
 // it is not valid JSON (plain-text outputs).
 function prettyJSON(s) {
   try { return JSON.stringify(JSON.parse(s), null, 2); } catch (e) { return s; }
+}
+
+// Retention footer (Spec 29 #6, closes F40): states the active policy from
+// /api/features. days === 0 means unlimited; absent field (older operator)
+// renders nothing.
+function retentionFooter() {
+  const f = state.features;
+  const days = f && typeof f.historyRetentionDays === 'number' ? f.historyRetentionDays : null;
+  if (days === null) return '';
+  if (days === 0) return '<div class="hfoot"><span class="hfoot-dot"></span> Runs are retained indefinitely on this tier</div>';
+  const pro = days < 90 ? '<a href="https://purko.io/pricing" target="_blank" rel="noopener">Pro keeps 90 days &rarr;</a>' : '';
+  return `<div class="hfoot"><span class="hfoot-dot"></span> Runs are pruned after <b>${days} days</b>${pro}</div>`;
 }

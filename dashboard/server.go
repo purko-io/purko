@@ -755,11 +755,18 @@ func (s *Server) handleDeleteWorkflow(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "deleted", "name": name})
 }
 
-// handleFeatures reports the compiled-in capability set (Spec 28).
-// proFeatures() is a per-edition compile constant: all-true in the Pro
-// build (handlers_pro.go), all-false in community (handlers_community.go).
+// handleFeatures reports the compiled-in capability set (Spec 28) plus the
+// history retention window (Spec 29 #6). proFeatures() is a per-edition
+// compile constant: all-true in the Pro build (handlers_pro.go), all-false
+// except history in community (handlers_community.go). Retention rides as a parallel
+// non-bool field — never folded into the bool map.
 func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, proFeatures())
+	resp := make(map[string]interface{}, 8)
+	for k, v := range proFeatures() {
+		resp[k] = v
+	}
+	resp["historyRetentionDays"] = historyRetentionDays()
+	writeJSON(w, resp)
 }
 
 func (s *Server) handleWebhookTrigger(w http.ResponseWriter, r *http.Request) {

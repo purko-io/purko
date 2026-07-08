@@ -29,6 +29,26 @@ function upgradeCard(title, desc) {
   </div>`;
 }
 
+// One-line variant of upgradeCard (Spec 29 #2): keeps pitch + CTA, reclaims
+// the vertical space a full card would burn next to real data.
+function upgradeStrip(title, desc) {
+  return `<div class="pro-strip">
+    <span class="pro-strip-ic">&#x2728;</span>
+    <span class="pro-strip-txt"><b>${title}</b> <span class="tag tag--blue">Pro</span> — ${desc}</span>
+    <a href="https://purko.io/pricing" target="_blank" rel="noopener">Upgrade &rarr;</a>
+  </div>`;
+}
+
+// Theme toggle (Spec 29). The pre-paint script in index.html applies the
+// stored/OS choice before first render; this just flips and persists it.
+function toggleTheme() {
+  const root = document.documentElement;
+  const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  if (next === 'light') root.setAttribute('data-theme', 'light');
+  else root.removeAttribute('data-theme');
+  localStorage.setItem('purko-theme', next);
+}
+
 // ── Router ──────────────────────────────────────────────────────────
 
 const router = {
@@ -113,6 +133,35 @@ function conditionsHTML(conditions) {
       return `<span class="cond ${ok ? 'cond-ok' : 'cond-fail'}">${c.type}</span>`;
     }).join('') +
     '</div>';
+}
+
+// Inline sparkline for insight cards (Spec 29 #1). points: array of numbers.
+// Returns '' when there is nothing meaningful to draw.
+function sparklineSVG(points, colorVar) {
+  if (!points || points.length < 2) return '';
+  const max = Math.max(...points);
+  if (max === 0) return '';
+  const w = 70, h = 22, min = Math.min(...points), span = (max - min) || 1;
+  const step = w / (points.length - 1);
+  const d = points.map((p, i) =>
+    `${i ? 'L' : 'M'}${(i * step).toFixed(1)} ${(h - 2 - ((p - min) / span) * (h - 4)).toFixed(1)}`
+  ).join(' ');
+  return `<svg class="card-spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" aria-hidden="true"><path d="${d}" stroke="var(${colorVar})" stroke-width="1.5" opacity="0.8"/></svg>`;
+}
+
+// Bucket archived runs into fixed windows for sparklines (Spec 29 #1).
+function historyBuckets(runs, hours, buckets) {
+  const now = Date.now(), span = hours * 3600 * 1000, step = span / buckets;
+  const counts = new Array(buckets).fill(0), ok = new Array(buckets).fill(0);
+  for (const r of (runs || [])) {
+    if (!r.startTime) continue;
+    const t = new Date(r.startTime).getTime();
+    if (isNaN(t) || now - t > span || t > now) continue;
+    const i = Math.min(buckets - 1, Math.floor((t - (now - span)) / step));
+    counts[i]++;
+    if (r.phase === 'Succeeded') ok[i]++;
+  }
+  return { counts, ok };
 }
 
 function renderMarkdown(md) {

@@ -40,9 +40,11 @@ function loadLLMProviders() {
           <div class="mcp-card-meta">
             <span class="mono">Default model: ${sp.model || '-'}</span>
             <span class="mono">${st.availableModels || 0} models</span>
+            ${st.lastHealthCheck ? `<span class="mono">checked ${new Date(st.lastHealthCheck).toLocaleTimeString()}</span>` : ''}
           </div>
         </div>
 
+        ${st.message && st.phase && st.phase !== 'Ready' ? `<div style="margin:10px 0 0;font-size:12px;color:var(--amber)">${esc(st.message)}</div>` : ''}
         ${st.conditions && st.conditions.length > 0 ? `<div style="margin:12px 0">${conditionsHTML(st.conditions)}</div>` : ''}
         ${modelsHTML}
 
@@ -116,7 +118,7 @@ function showAddLLMForm() {
         <textarea id="llm-config" rows="3" placeholder="key=value (one per line)&#10;e.g. endpoint=http://ollama:11434&#10;projectId=my-gcp-project" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea>
       </div>
       <label></label>
-      <div id="llm-hint" style="font-size:11px;color:var(--dim);background:rgba(0,180,255,0.04);border:1px solid rgba(0,180,255,0.1);border-radius:var(--radius-xs);padding:8px 12px"></div>
+      <div id="llm-hint" style="font-size:11px;color:var(--dim);background:color-mix(in srgb, var(--accent) 4%, transparent);border:1px solid color-mix(in srgb, var(--accent) 10%, transparent);border-radius:var(--radius-xs);padding:8px 12px"></div>
     </div>
     <div class="form-actions">
       <button class="btn btn--primary" onclick="createLLMProvider()">Create Provider</button>
