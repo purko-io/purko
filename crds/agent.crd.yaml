@@ -199,6 +199,17 @@ spec:
                 type: object
                 description: Memory configuration for the agent.
                 properties:
+                  behavior:
+                    type: string
+                    enum: ["off", session, persistent]
+                    description: "Memory behavior (Spec 34). off=clean slate, session=within one run, persistent=across runs."
+                  providerRef:
+                    type: string
+                    description: "MemoryProvider name; empty = platform default."
+                  scope:
+                    type: string
+                    enum: [agent, group, namespace]
+                    description: "Recall pool: agent (default), group (same app.kubernetes.io/component), namespace."
                   backend:
                     type: string
                     description: Storage backend for agent memory (e.g., redis, postgres,

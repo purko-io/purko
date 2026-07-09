@@ -1,0 +1,93 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: memoryproviders.purko.io
+spec:
+  group: purko.io
+  names:
+    kind: MemoryProvider
+    listKind: MemoryProviderList
+    plural: memoryproviders
+    singular: memoryprovider
+    shortNames:
+    - mem
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      jsonPath: .spec.type
+    - name: Default
+      type: boolean
+      jsonPath: .spec.default
+    - name: Healthy
+      type: boolean
+      jsonPath: .status.healthy
+    - name: Entries
+      type: integer
+      jsonPath: .status.entryCount
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            type: object
+            required:
+            - type
+            properties:
+              type:
+                type: string
+                enum:
+                - builtin
+                - redis
+                - postgres
+                - mcp
+              config:
+                type: object
+                additionalProperties:
+                  type: string
+              credentials:
+                type: object
+                properties:
+                  secretRef:
+                    type: string
+                  secretKey:
+                    type: string
+              default:
+                type: boolean
+              retention:
+                type: object
+                properties:
+                  maxEntriesPerScope:
+                    type: integer
+                  maxAgeDays:
+                    type: integer
+                  recallLogMaxAgeDays:
+                    type: integer
+          status:
+            type: object
+            properties:
+              healthy:
+                type: boolean
+              entryCount:
+                type: integer
+                format: int64
+              lastError:
+                type: string
+              lastChecked:
+                type: string
+                format: date-time

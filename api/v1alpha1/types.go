@@ -24,6 +24,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&MCPServerList{},
 		&LLMProvider{},
 		&LLMProviderList{},
+		&MemoryProvider{},
+		&MemoryProviderList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
@@ -133,13 +135,20 @@ type ToolSpec struct {
 }
 
 type MemorySpec struct {
-	Type              string             `json:"type,omitempty"` // buffer, summary, vector, none
-	Backend           string             `json:"backend,omitempty"`
+	// Deprecated: use Behavior. Equivalence for webhook validation and dashboard
+	// display ONLY (none≈off, buffer≈session, summary≈persistent, vector≈persistent).
+	// At runtime, legacy Type keeps its legacy code path unchanged; Behavior, when
+	// set, wins and drives the new provider-mediated path (Spec 34 §1).
+	Type              string             `json:"type,omitempty"`        // buffer, summary, vector, none
+	Behavior          string             `json:"behavior,omitempty"`    // off, session, persistent
+	ProviderRef       string             `json:"providerRef,omitempty"` // MemoryProvider name; empty = platform default
+	Scope             string             `json:"scope,omitempty"`       // agent (default), group, namespace
+	Backend           string             `json:"backend,omitempty"`     // Deprecated, unused (kept for back-compat)
 	TTL               string             `json:"ttl,omitempty"`
-	MaxEntries        *int               `json:"maxEntries,omitempty"`
-	MaxContextTokens  *int               `json:"maxContextTokens,omitempty"`
-	RetentionPolicy   string             `json:"retentionPolicy,omitempty"`
-	PersistentStorage *PersistentStorage `json:"persistentStorage,omitempty"`
+	MaxEntries        *int               `json:"maxEntries,omitempty"`        // per scope key (default 500)
+	MaxContextTokens  *int               `json:"maxContextTokens,omitempty"`  // cap on injected recall (default 2048)
+	RetentionPolicy   string             `json:"retentionPolicy,omitempty"`   // Deprecated, unused (kept for back-compat)
+	PersistentStorage *PersistentStorage `json:"persistentStorage,omitempty"` // legacy vector path only
 }
 
 type PersistentStorage struct {
@@ -455,6 +464,94 @@ func (l *LLMProviderList) DeepCopyObject() runtime.Object {
 	return &cp
 }
 
+// ── MemoryProvider CRD (Spec 34) ──────────────────────────────────
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+type MemoryProvider struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              MemoryProviderSpec   `json:"spec,omitempty"`
+	Status            MemoryProviderStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+type MemoryProviderList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []MemoryProvider `json:"items"`
+}
+
+type MemoryProviderSpec struct {
+	Type        string            `json:"type"`             // builtin (implemented); redis, postgres, mcp (reserved)
+	Config      map[string]string `json:"config,omitempty"` // provider-specific
+	Credentials *CredentialSpec   `json:"credentials,omitempty"`
+	Default     bool              `json:"default,omitempty"` // platform default when Agent.providerRef empty
+	Retention   *MemoryRetention  `json:"retention,omitempty"`
+}
+
+type MemoryRetention struct {
+	MaxEntriesPerScope  *int `json:"maxEntriesPerScope,omitempty"`  // default 500
+	MaxAgeDays          *int `json:"maxAgeDays,omitempty"`          // unset = no age cap
+	RecallLogMaxAgeDays *int `json:"recallLogMaxAgeDays,omitempty"` // default 90
+}
+
+type MemoryProviderStatus struct {
+	Healthy     bool        `json:"healthy"`
+	EntryCount  int64       `json:"entryCount,omitempty"`
+	LastError   string      `json:"lastError,omitempty"`
+	LastChecked metav1.Time `json:"lastChecked,omitempty"`
+}
+
+func (p *MemoryProvider) DeepCopyObject() runtime.Object {
+	if p == nil {
+		return nil
+	}
+	cp := *p
+	cp.ObjectMeta = *p.ObjectMeta.DeepCopy()
+	// deep-copy spec map
+	if p.Spec.Config != nil {
+		cp.Spec.Config = make(map[string]string, len(p.Spec.Config))
+		for k, v := range p.Spec.Config {
+			cp.Spec.Config[k] = v
+		}
+	}
+	// deep-copy spec pointer fields
+	if p.Spec.Credentials != nil {
+		cred := *p.Spec.Credentials
+		cp.Spec.Credentials = &cred
+	}
+	if p.Spec.Retention != nil {
+		ret := *p.Spec.Retention
+		if p.Spec.Retention.MaxEntriesPerScope != nil {
+			v := *p.Spec.Retention.MaxEntriesPerScope
+			ret.MaxEntriesPerScope = &v
+		}
+		if p.Spec.Retention.MaxAgeDays != nil {
+			v := *p.Spec.Retention.MaxAgeDays
+			ret.MaxAgeDays = &v
+		}
+		if p.Spec.Retention.RecallLogMaxAgeDays != nil {
+			v := *p.Spec.Retention.RecallLogMaxAgeDays
+			ret.RecallLogMaxAgeDays = &v
+		}
+		cp.Spec.Retention = &ret
+	}
+	return &cp
+}
+
+func (l *MemoryProviderList) DeepCopyObject() runtime.Object {
+	cp := *l
+	cp.ListMeta = *l.ListMeta.DeepCopy()
+	if l.Items != nil {
+		cp.Items = make([]MemoryProvider, len(l.Items))
+		for i := range l.Items {
+			cp.Items[i] = *l.Items[i].DeepCopyObject().(*MemoryProvider)
+		}
+	}
+	return &cp
+}
+
 // ── Workflow ─────────────────────────────────────────────────────────
 
 // +kubebuilder:object:root=true
@@ -617,6 +714,20 @@ func (in *AgentSpec) DeepCopyInto(out *AgentSpec) {
 	if in.Memory != nil {
 		out.Memory = new(MemorySpec)
 		*out.Memory = *in.Memory
+		// Deep-copy the pointer fields so copies don't share pointees
+		// (MaxContextTokens/MaxEntries became real *int with Spec 34).
+		if in.Memory.MaxContextTokens != nil {
+			v := *in.Memory.MaxContextTokens
+			out.Memory.MaxContextTokens = &v
+		}
+		if in.Memory.MaxEntries != nil {
+			v := *in.Memory.MaxEntries
+			out.Memory.MaxEntries = &v
+		}
+		if in.Memory.PersistentStorage != nil {
+			ps := *in.Memory.PersistentStorage
+			out.Memory.PersistentStorage = &ps
+		}
 	}
 	if in.Runtime != nil {
 		out.Runtime = new(RuntimeSpec)
