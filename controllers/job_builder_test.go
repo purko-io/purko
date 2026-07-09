@@ -29,7 +29,7 @@ func TestBuildStepJobPodNetwork(t *testing.T) {
 
 	t.Run("default: normal pod networking with cluster DNS", func(t *testing.T) {
 		t.Setenv("PURKO_EXECUTOR_HOST_NETWORK", "")
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "", "")
 		spec := job.Spec.Template.Spec
 		if spec.HostNetwork {
 			t.Error("HostNetwork should default to false — it breaks cluster-DNS access to in-cluster services")
@@ -46,7 +46,7 @@ func TestBuildStepJobPodNetwork(t *testing.T) {
 		a.Spec.Model.Provider = "local-ollama"
 		a.Spec.Model.Name = "smollm2:135m"
 		a.Spec.Model.MaxTokens = &maxTokens
-		job := buildStepJob(wf, step, a, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, a, "run1", input, nil, "", nil, "", "")
 		found := ""
 		for _, e := range job.Spec.Template.Spec.Containers[0].Env {
 			if e.Name == "MODEL_MAX_TOKENS" {
@@ -59,7 +59,7 @@ func TestBuildStepJobPodNetwork(t *testing.T) {
 	})
 
 	t.Run("no maxTokens env when agent does not set it", func(t *testing.T) {
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "", "")
 		for _, e := range job.Spec.Template.Spec.Containers[0].Env {
 			if e.Name == "MODEL_MAX_TOKENS" {
 				t.Errorf("unexpected MODEL_MAX_TOKENS = %q", e.Value)
@@ -69,7 +69,7 @@ func TestBuildStepJobPodNetwork(t *testing.T) {
 
 	t.Run("opt-in host networking for local dev", func(t *testing.T) {
 		t.Setenv("PURKO_EXECUTOR_HOST_NETWORK", "true")
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "", "")
 		spec := job.Spec.Template.Spec
 		if !spec.HostNetwork {
 			t.Error("HostNetwork should be true when PURKO_EXECUTOR_HOST_NETWORK=true")
@@ -110,7 +110,7 @@ func TestBuildStepJobModelNameFollowsFallbackProvider(t *testing.T) {
 		fallback.Spec.Type = "ollama"
 		fallback.Spec.Model = "qwen3.5:4b"
 		fallback.Spec.Endpoint = "http://ollama.ai-agents:11434/v1"
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", fallback, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", fallback, "", "")
 		if got := modelName(job); got != "qwen3.5:4b" {
 			t.Errorf("MODEL_NAME = %q, want fallback provider model qwen3.5:4b", got)
 		}
@@ -121,7 +121,7 @@ func TestBuildStepJobModelNameFollowsFallbackProvider(t *testing.T) {
 		matched.Name = "anthropic" // == agent.Spec.Model.Provider
 		matched.Spec.Type = "anthropic"
 		matched.Spec.Model = "claude-haiku-4-5"
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", matched, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", matched, "", "")
 		if got := modelName(job); got != "claude-sonnet-4-6" {
 			t.Errorf("MODEL_NAME = %q, want agent's own claude-sonnet-4-6", got)
 		}
@@ -131,7 +131,7 @@ func TestBuildStepJobModelNameFollowsFallbackProvider(t *testing.T) {
 		fallback := &v1alpha1.LLMProvider{}
 		fallback.Name = "ollama"
 		fallback.Spec.Type = "ollama"
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", fallback, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", fallback, "", "")
 		if got := modelName(job); got != "claude-sonnet-4-6" {
 			t.Errorf("MODEL_NAME = %q, want agent model kept when provider has none", got)
 		}
@@ -164,7 +164,7 @@ func TestBuildStepJobModelTimeoutFromProviderConfig(t *testing.T) {
 		p.Name = "ollama"
 		p.Spec.Type = "ollama"
 		p.Spec.Config = map[string]string{"timeoutSeconds": "600"}
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "", "")
 		if got := timeoutEnv(job); got != "600" {
 			t.Errorf("MODEL_TIMEOUT = %q, want 600", got)
 		}
@@ -174,7 +174,7 @@ func TestBuildStepJobModelTimeoutFromProviderConfig(t *testing.T) {
 		p := &v1alpha1.LLMProvider{}
 		p.Name = "ollama"
 		p.Spec.Type = "ollama"
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "", "")
 		if got := timeoutEnv(job); got != "" {
 			t.Errorf("unexpected MODEL_TIMEOUT = %q", got)
 		}
@@ -185,7 +185,7 @@ func TestBuildStepJobModelTimeoutFromProviderConfig(t *testing.T) {
 		p.Name = "ollama"
 		p.Spec.Type = "ollama"
 		p.Spec.Config = map[string]string{"timeoutSeconds": "10m"}
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "", "")
 		if got := timeoutEnv(job); got != "" {
 			t.Errorf("MODEL_TIMEOUT = %q, want empty for invalid value", got)
 		}
@@ -219,7 +219,7 @@ func TestBuildStepJobModelPricingFromProvider(t *testing.T) {
 		p.Spec.Models = []v1alpha1.ModelDefinition{
 			{Name: "qwen3.5:4b", Pricing: &v1alpha1.ModelPricing{InputPerMToken: 1.5, OutputPerMToken: 6}},
 		}
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "", "")
 		if got := envOf(job, "MODEL_PRICE_IN"); got != "1.5" {
 			t.Errorf("MODEL_PRICE_IN = %q, want 1.5", got)
 		}
@@ -232,7 +232,7 @@ func TestBuildStepJobModelPricingFromProvider(t *testing.T) {
 		p := &v1alpha1.LLMProvider{}
 		p.Name = "ollama"
 		p.Spec.Type = "ollama"
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", p, "", "")
 		if got := envOf(job, "MODEL_PRICE_IN"); got != "" {
 			t.Errorf("unexpected MODEL_PRICE_IN = %q", got)
 		}
@@ -251,7 +251,7 @@ func TestBuildStepJobExecutorImageFromEnv(t *testing.T) {
 
 	t.Run("env overrides the localhost default", func(t *testing.T) {
 		t.Setenv("PURKO_EXECUTOR_IMAGE", "ghcr.io/purko-io/purko-executor:v0.3.1")
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "", "")
 		if got := job.Spec.Template.Spec.Containers[0].Image; got != "ghcr.io/purko-io/purko-executor:v0.3.1" {
 			t.Errorf("image = %q, want env override", got)
 		}
@@ -262,7 +262,7 @@ func TestBuildStepJobExecutorImageFromEnv(t *testing.T) {
 		a := &v1alpha1.Agent{}
 		a.Name = "a1"
 		a.Spec.Runtime = &v1alpha1.RuntimeSpec{Image: "custom/executor:dev"}
-		job := buildStepJob(wf, step, a, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, a, "run1", input, nil, "", nil, "", "")
 		if got := job.Spec.Template.Spec.Containers[0].Image; got != "custom/executor:dev" {
 			t.Errorf("image = %q, want agent runtime image", got)
 		}
@@ -270,7 +270,7 @@ func TestBuildStepJobExecutorImageFromEnv(t *testing.T) {
 
 	t.Run("localhost default without env", func(t *testing.T) {
 		t.Setenv("PURKO_EXECUTOR_IMAGE", "")
-		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "")
+		job := buildStepJob(wf, step, agent, "run1", input, nil, "", nil, "", "")
 		if got := job.Spec.Template.Spec.Containers[0].Image; got != defaultExecutorImage {
 			t.Errorf("image = %q, want %q", got, defaultExecutorImage)
 		}
