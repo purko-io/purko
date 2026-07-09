@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -73,12 +73,20 @@ func (r *LLMProviderReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	})
 
 	if credStatus {
+		// Credential-less providers (ollama/custom) validate true with a nil
+		// Credentials — don't dereference SecretRef for them.
+		credMsg := "No credentials required"
+		credReason := "NoCredentialsRequired"
+		if provider.Spec.Credentials != nil {
+			credMsg = fmt.Sprintf("Credentials loaded from %s", provider.Spec.Credentials.SecretRef)
+			credReason = "SecretFound"
+		}
 		meta.SetStatusCondition(&provider.Status.Conditions, metav1.Condition{
 			Type:               "CredentialsValid",
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             "SecretFound",
-			Message:            fmt.Sprintf("Credentials loaded from %s", provider.Spec.Credentials.SecretRef),
+			Reason:             credReason,
+			Message:            credMsg,
 		})
 	}
 
