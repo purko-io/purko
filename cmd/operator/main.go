@@ -24,6 +24,7 @@ import (
 	"github.com/purko-io/purko/dashboard"
 	"github.com/purko-io/purko/pkg/history"
 	"github.com/purko-io/purko/pkg/licensing"
+	"github.com/purko-io/purko/pkg/memory"
 	"github.com/purko-io/purko/pkg/registry"
 	"github.com/purko-io/purko/webhooks"
 )
@@ -142,6 +143,24 @@ func main() {
 		}
 	}
 
+	// Built-in memory provider (Spec 34). Gated on its OWN PURKO_MEMORY_ENABLED
+	// (default true via Helm), independent of history; same PVC, distinct file.
+	var memoryStore *memory.SQLiteStore
+	if os.Getenv("PURKO_MEMORY_ENABLED") != "false" {
+		memoryPath := os.Getenv("PURKO_MEMORY_PATH")
+		if memoryPath == "" {
+			memoryPath = "/var/lib/purko/memory.db"
+		}
+		memoryStore, err = memory.NewSQLiteStore(memoryPath)
+		if err != nil {
+			logger.Error(err, "Failed to open memory database — continuing WITHOUT persistent memory", "path", memoryPath)
+			memoryStore = nil
+		} else {
+			defer memoryStore.Close()
+			logger.Info("Built-in memory provider enabled", "path", memoryPath)
+		}
+	}
+
 	// Set up Workflow controller
 	wfReconciler := &controllers.WorkflowReconciler{
 		Client:     mgr.GetClient(),
@@ -151,6 +170,9 @@ func main() {
 	}
 	if historyStore != nil {
 		wfReconciler.HistoryStore = historyStore
+	}
+	if memoryStore != nil {
+		wfReconciler.Memory = memoryStore
 	}
 	if err := wfReconciler.SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller", "controller", "Workflow")
@@ -174,6 +196,20 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller", "controller", "LLMProvider")
 		os.Exit(1)
+	}
+
+	// Set up MemoryProvider status reconciler (Spec 34 §4). Guard on memoryStore != nil:
+	// assigning a nil *SQLiteStore to a memory.Store interface yields a non-nil typed-nil,
+	// so r.Memory != nil would be true and Healthy() would deref a nil db → panic.
+	if memoryStore != nil {
+		if err := (&controllers.MemoryProviderReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+			Memory: memoryStore,
+		}).SetupWithManager(mgr); err != nil {
+			logger.Error(err, "unable to create MemoryProvider controller")
+			os.Exit(1)
+		}
 	}
 
 	// Set up admission webhooks if enabled
@@ -234,6 +270,27 @@ func main() {
 				case <-ticker.C:
 					cleanup()
 				}
+			}
+		}()
+	}
+
+	// Memory recall_log retention — prunes recall_log to 90d on startup then every 24h.
+	// Per-scope Retain eviction runs inline on each Learn in the controller (Task 7).
+	if memoryStore != nil {
+		go func() {
+			cleanup := func() {
+				// Age caps: memory 0 (unbounded by default), recall_log 90d (Spec 34 §5).
+				if n, err := memoryStore.DeleteRecallLogOlderThan(context.Background(), 90); err != nil {
+					logger.Error(err, "memory recall_log cleanup failed")
+				} else if n > 0 {
+					logger.Info("Pruned recall_log", "rows", n)
+				}
+			}
+			cleanup()
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				cleanup()
 			}
 		}()
 	}

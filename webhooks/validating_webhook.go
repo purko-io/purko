@@ -30,6 +30,8 @@ func (v *AgentValidator) Handle(ctx context.Context, req admission.Request) admi
 			fmt.Errorf("failed to decode Agent: %w", err))
 	}
 
+	var warnings []string
+
 	// Model provider and name are required
 	if agent.Spec.Model.Provider == "" {
 		return admission.Denied("spec.model.provider must not be empty")
@@ -132,24 +134,74 @@ func (v *AgentValidator) Handle(ctx context.Context, req admission.Request) admi
 		}
 	}
 
-	// AG-010: retriever agents must have memory.type of vector or buffer
+	// AG-010: retriever agents must have a memory that can retrieve — legacy
+	// type {vector,buffer,summary} OR a new behavior {session,persistent}
+	// (Spec 34 §7: the dashboard default is behavior=persistent with no type).
 	if agent.Spec.Type == "retriever" {
-		if agent.Spec.Memory == nil || (agent.Spec.Memory.Type != "vector" && agent.Spec.Memory.Type != "buffer" && agent.Spec.Memory.Type != "summary") {
-			return admission.Denied(
-				"AG-010: retriever agents must have spec.memory.type set to vector, buffer, or summary")
+		m := agent.Spec.Memory
+		legacyOK := m != nil && (m.Type == "vector" || m.Type == "buffer" || m.Type == "summary")
+		behaviorOK := m != nil && (m.Behavior == "session" || m.Behavior == "persistent")
+		if !legacyOK && !behaviorOK {
+			return admission.Denied("AG-010: retriever agents need spec.memory.type (vector/buffer/summary) or spec.memory.behavior (session/persistent)")
 		}
 	}
 
-	// Memory: if present, type must be valid
-	if agent.Spec.Memory != nil && agent.Spec.Memory.Type != "" {
-		validMemory := map[string]bool{"buffer": true, "summary": true, "vector": true, "none": true}
-		if !validMemory[agent.Spec.Memory.Type] {
-			return admission.Denied(fmt.Sprintf(
-				"spec.memory.type must be buffer, summary, vector, or none (got %q)", agent.Spec.Memory.Type))
+	if m := agent.Spec.Memory; m != nil {
+		// Legacy type enum (unchanged).
+		if m.Type != "" {
+			validMemory := map[string]bool{"buffer": true, "summary": true, "vector": true, "none": true}
+			if !validMemory[m.Type] {
+				return admission.Denied(fmt.Sprintf("spec.memory.type must be buffer, summary, vector, or none (got %q)", m.Type))
+			}
+		}
+		// Behavior enum (Spec 34 §7).
+		if m.Behavior != "" {
+			validBehavior := map[string]bool{"off": true, "session": true, "persistent": true}
+			if !validBehavior[m.Behavior] {
+				return admission.Denied(fmt.Sprintf("spec.memory.behavior must be off, session, or persistent (got %q)", m.Behavior))
+			}
+		}
+		// Both set -> behavior wins, warn (Spec 34 §7).
+		if m.Type != "" && m.Behavior != "" {
+			warnings = append(warnings, "spec.memory: both type and behavior set — behavior wins; type is ignored at runtime")
+			// Additional: vector PVC path lost (T8 review carry-forward).
+			if m.Type == "vector" {
+				warnings = append(warnings, "spec.memory: behavior overrides the vector PVC path — the persistent-storage mount will not be used")
+			}
+		}
+		// Scope enum + group label requirement (Spec 34 §7).
+		if m.Scope != "" {
+			validScope := map[string]bool{"agent": true, "group": true, "namespace": true}
+			if !validScope[m.Scope] {
+				return admission.Denied(fmt.Sprintf("spec.memory.scope must be agent, group, or namespace (got %q)", m.Scope))
+			}
+			if m.Scope == "group" && agent.Labels["app.kubernetes.io/component"] == "" {
+				return admission.Denied("spec.memory.scope=group requires the app.kubernetes.io/component label (the group key)")
+			}
+		}
+		// Bounds (Spec 34 §7).
+		if m.MaxContextTokens != nil && *m.MaxContextTokens > 32768 {
+			return admission.Denied(fmt.Sprintf("spec.memory.maxContextTokens must be <= 32768 (got %d)", *m.MaxContextTokens))
+		}
+		if m.MaxEntries != nil && *m.MaxEntries > 10000 {
+			return admission.Denied(fmt.Sprintf("spec.memory.maxEntries must be <= 10000 (got %d)", *m.MaxEntries))
+		}
+		// providerRef existence (Spec 34 §7). MemoryProviders live in purko-system.
+		if m.ProviderRef != "" && v.Client != nil {
+			mp := &v1alpha1.MemoryProvider{}
+			if err := v.Client.Get(ctx, client.ObjectKey{Name: m.ProviderRef, Namespace: "purko-system"}, mp); err != nil {
+				if errors.IsNotFound(err) {
+					return admission.Denied(fmt.Sprintf("spec.memory.providerRef %q not found (MemoryProviders live in purko-system)", m.ProviderRef))
+				}
+			}
+		}
+		// Cross-agent authorship warning (Spec 34 §6).
+		if m.Scope == "namespace" && agent.Spec.AutonomyLevel == "full" {
+			warnings = append(warnings, "spec.memory.scope=namespace with autonomyLevel=full: a low-trust agent's memories may be recalled and acted on by this high-autonomy agent")
 		}
 	}
 
-	return admission.Allowed("agent validation passed")
+	return admission.Allowed("agent validation passed").WithWarnings(warnings...)
 }
 
 // WorkflowValidator validates Workflow resources.
