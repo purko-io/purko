@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -23,6 +24,7 @@ import (
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 	"github.com/purko-io/purko/pkg/history"
+	"github.com/purko-io/purko/pkg/memory"
 )
 
 const (
@@ -38,8 +40,10 @@ type WorkflowReconciler struct {
 	client.Client
 	Scheme       *runtime.Scheme
 	Clientset    *kubernetes.Clientset
-	MCPServers   MCPServersProvider // dynamic MCP server config
-	HistoryStore history.Store      // optional execution history archive (Spec 24)
+	MCPServers   MCPServersProvider   // dynamic MCP server config
+	HistoryStore history.Store        // optional execution history archive (Spec 24)
+	Memory       memory.Store         // optional built-in memory provider (Spec 34)
+	Recorder     record.EventRecorder // K8s events for memory recall/learn failures (Spec 34 §4)
 }
 
 // +kubebuilder:rbac:groups=purko.io,resources=workflows,verbs=get;list;watch;create;update;patch;delete
@@ -306,7 +310,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 						}
 					}
 					// Update agent metrics from step output _metrics
-					r.updateAgentMetrics(ctx, wf.Namespace, agentName, output, ss.StartTime, &now)
+					r.updateAgentMetrics(ctx, wf.Namespace, agentName, output, ss.StartTime, &now, wf, ss.Name)
 				}
 				// Archive step execution + tool call audit trail (Spec 24)
 				r.recordStepHistory(ctx, wf, ss, job.Labels[labelAgent], output)
@@ -441,7 +445,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 						}
 
 						rbLLM, rbKey, _ := r.resolveLLMProvider(ctx, agent.Spec.Model.Provider)
-						rbJob := buildStepJob(wf, *step, agent, runID+"-rb", json.RawMessage(rollbackJSON), nil, mcpJSON, rbLLM, rbKey)
+						rbJob := buildStepJob(wf, *step, agent, runID+"-rb", json.RawMessage(rollbackJSON), nil, mcpJSON, rbLLM, rbKey, "")
 						rbJob.Name = fmt.Sprintf("%s-rollback-%s", wf.Name, ss.Name)
 						if err := r.Create(ctx, rbJob); err != nil {
 							if !errors.IsAlreadyExists(err) {
@@ -659,7 +663,12 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Info("No LLMProvider CR found, falling back to operator env vars (deprecated)", "provider", agent.Spec.Model.Provider)
 		}
 
-		job := buildStepJob(wf, *step, agent, runID, stepInput, inputFromEnvs, mcpJSON, llmProvider, llmAPIKey)
+		recalledMemory := ""
+		if memoryBehavior(agent) == "persistent" {
+			r.importLegacyMemory(ctx, agent, wf)
+			recalledMemory = r.recallMemory(ctx, agent, wf, runID, step.Name, string(stepInput))
+		}
+		job := buildStepJob(wf, *step, agent, runID, stepInput, inputFromEnvs, mcpJSON, llmProvider, llmAPIKey, recalledMemory)
 		if err := r.Create(ctx, job); err != nil {
 			if errors.IsAlreadyExists(err) {
 				logger.Info("Job already exists", "step", stepName)
@@ -1133,7 +1142,7 @@ func (r *WorkflowReconciler) setPhase(ctx context.Context, wf *v1alpha1.Workflow
 }
 
 // updateAgentMetrics reads _metrics from step output and aggregates into the agent's status.
-func (r *WorkflowReconciler) updateAgentMetrics(ctx context.Context, namespace, agentName string, output json.RawMessage, startTime, endTime *metav1.Time) {
+func (r *WorkflowReconciler) updateAgentMetrics(ctx context.Context, namespace, agentName string, output json.RawMessage, startTime, endTime *metav1.Time, wf *v1alpha1.Workflow, step string) {
 	logger := log.FromContext(ctx)
 
 	// Parse _metrics from output
@@ -1154,11 +1163,30 @@ func (r *WorkflowReconciler) updateAgentMetrics(ctx context.Context, namespace, 
 		return
 	}
 
-	// Handle memory_update — store summary in agent memory ConfigMap
+	// Fetch the agent ONCE — it drives both memory routing (behavior read) and the
+	// metrics aggregation below. A failed Get must NOT fall through to the legacy
+	// ConfigMap branch: a persistent agent misread as zero-valued would route its
+	// _memory_update into a ConfigMap. Skip memory persistence and metrics entirely
+	// (metrics handled the miss the same way before this change).
+	agent := &v1alpha1.Agent{}
+	if err := r.Get(ctx, client.ObjectKey{Name: agentName, Namespace: namespace}, agent); err != nil {
+		logger.Error(err, "agent fetch failed — skipping memory persistence and metrics", "agent", agentName)
+		r.memoryEvent(wf, corev1.EventTypeWarning, "AgentFetchFailed",
+			fmt.Sprintf("agent %s fetch failed for step %s; memory persistence skipped: %v", agentName, step, err))
+		return
+	}
+
+	// Route memory persistence by behavior (Spec 34 §3): persistent -> provider
+	// (skip ConfigMap), legacy summary -> ConfigMap as before.
 	if memoryUpdate, ok := outputMap["_memory_update"]; ok {
 		var summary string
 		json.Unmarshal(memoryUpdate, &summary)
-		if summary != "" {
+		if memoryBehavior(agent) == "persistent" {
+			// New path: provider store with real wf/step provenance, ConfigMap skipped.
+			respText := extractResponseText(outputMap)
+			r.persistMemory(ctx, agent, wf, step, summary, "", respText)
+		} else if summary != "" {
+			// Legacy summary path unchanged.
 			r.storeAgentMemory(ctx, namespace, agentName, summary)
 		}
 	}
@@ -1167,12 +1195,6 @@ func (r *WorkflowReconciler) updateAgentMetrics(ctx context.Context, namespace, 
 	var latencyMs int64
 	if startTime != nil && endTime != nil {
 		latencyMs = endTime.Sub(startTime.Time).Milliseconds()
-	}
-
-	// Read agent and update metrics
-	agent := &v1alpha1.Agent{}
-	if err := r.Get(ctx, client.ObjectKey{Name: agentName, Namespace: namespace}, agent); err != nil {
-		return
 	}
 
 	if agent.Status.Metrics == nil {
@@ -1351,6 +1373,9 @@ func (r *WorkflowReconciler) recordAgentFailure(ctx context.Context, namespace, 
 }
 
 func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.Recorder == nil {
+		r.Recorder = mgr.GetEventRecorderFor("workflow-controller")
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Workflow{}).
 		Owns(&batchv1.Job{}).

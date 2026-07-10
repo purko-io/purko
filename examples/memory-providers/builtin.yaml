@@ -1,0 +1,14 @@
+# Built-in SQLite+FTS5 memory provider (Spec 34). On a fresh install the operator
+# behaves as if this existed even when absent — create it only to set as the
+# explicit default or to tune retention. `kubectl get memoryproviders` shows health.
+apiVersion: purko.io/v1alpha1
+kind: MemoryProvider
+metadata:
+  name: builtin
+  namespace: purko-system
+spec:
+  type: builtin
+  default: true
+  retention:
+    maxEntriesPerScope: 500
+    recallLogMaxAgeDays: 90

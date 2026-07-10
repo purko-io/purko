@@ -8,3 +8,4 @@ resources:
   - mcpserver.crd.yaml
   - llmprovider.crd.yaml
   - autonomypolicy.crd.yaml
+  - memoryprovider.crd.yaml

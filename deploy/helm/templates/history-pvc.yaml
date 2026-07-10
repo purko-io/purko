@@ -1,4 +1,4 @@
-{{- if .Values.operator.history.enabled }}
+{{- if or .Values.operator.history.enabled .Values.operator.memory.enabled }}
 # Execution history archive (Spec 24). No owner references — history must
 # survive operator redeploys and workflow deletion. ReadWriteOnce is
 # sufficient for the single-replica operator; multi-replica HA requires

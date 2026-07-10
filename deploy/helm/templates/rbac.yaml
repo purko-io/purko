@@ -22,6 +22,11 @@ rules:
   - apiGroups: ["purko.io"]
     resources: ["llmproviders", "llmproviders/status", "llmproviders/finalizers"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # MemoryProviders (Spec 34): webhook providerRef Get + controller retention List
+  # need get/list/watch; the status reconciler needs update/patch on /status.
+  - apiGroups: ["purko.io"]
+    resources: ["memoryproviders", "memoryproviders/status", "memoryproviders/finalizers"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["purko.io"]
     resources: ["agentautonomypolicies", "agentautonomypolicies/status"]
     verbs: ["get", "list", "watch"]

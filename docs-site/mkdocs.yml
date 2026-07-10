@@ -66,6 +66,7 @@ nav:
     - Industry Templates: guides/industry-templates.md
     - SDLC Automation: guides/sdlc-workflow.md
     - Custom Executors: guides/custom-executor.md
+    - Agent Memory: guides/agent-memory.md
     - Intent Bar: guides/intent-bar.md
     - Execution History: guides/execution-history.md
   - Showcases:

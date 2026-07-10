@@ -299,7 +299,7 @@ Promise.all([
 // links land on the same view instead of resetting to the dashboard.
 function routeFromHash() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
-  const known = ['dashboard', 'agents', 'workflows', 'mcp', 'llm', 'history', 'settings'];
+  const known = ['dashboard', 'agents', 'workflows', 'mcp', 'llm', 'history', 'memory', 'settings'];
   const tab = known.includes(parts[0]) ? parts[0] : 'dashboard';
   const detail = parts[1] ? { name: decodeURIComponent(parts[1]) } : null;
   router.go(tab, detail);

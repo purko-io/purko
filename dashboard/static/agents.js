@@ -1,5 +1,18 @@
 // Purko Dashboard — Tab 2: Agents
 
+function behaviorForType(t) { return ({none:'off',buffer:'session',summary:'persistent',vector:'persistent'})[t] || ''; }
+
+// fillAgentMemCount populates the "N entries" span in the agent detail memory row
+// (spec §8). Best-effort: a 503 (memory disabled) or missing agent simply shows "0".
+function fillAgentMemCount(name) {
+  const span = document.querySelector('.mem-count[data-agent="' + (window.CSS ? CSS.escape(name) : name) + '"]');
+  if (!span) return;
+  fetch('/api/memory/stats').then(r => (r.ok ? r.json() : null)).then(s => {
+    const n = s && s.perAgent ? (s.perAgent[name] || 0) : 0;
+    span.textContent = n + ' entries';
+  }).catch(() => { span.textContent = '0 entries'; });
+}
+
 function init_agents(detail) {
   agentFormOpen = false;
   if (detail && detail.name) {
@@ -161,7 +174,7 @@ function viewAgent(name) {
           <div class="label">Type</div><div>${sp.type ? `<span class="tag tag--blue">${sp.type}</span>` : '-'}</div>
           <div class="label">Autonomy</div><div>${sp.autonomyLevel || '-'}</div>
           <div class="label">Model</div><div class="mono">${sp.model.provider}/${sp.model.name}</div>
-          ${sp.memory ? `<div class="label">Memory</div><div>${sp.memory.type || 'buffer'}</div>` : ''}
+          ${sp.memory ? (() => { const eb = sp.memory.behavior || behaviorForType(sp.memory.type) || 'session'; const mig = sp.memory.type && !sp.memory.behavior ? ` <span class="tag" style="font-size:9px">migrated from ${esc(sp.memory.type)}</span>` : ''; const rest = eb === 'off' ? '' : ` · <span class="mem-count" data-agent="${esc(a.metadata.name)}">…</span> · <span class="clickable" onclick="router.go('memory',{name:'${esc(a.metadata.name)}'})">view →</span>`; return `<div class="label">Memory</div><div>${eb}${mig}${rest}</div>`; })() : ''}
           <div class="label">Temperature</div><div>${sp.model.temperature != null ? sp.model.temperature : '-'}</div>
           <div class="label">Image</div><div class="mono">${sp.runtime && sp.runtime.image ? sp.runtime.image : 'purko-executor:latest'}</div>
           <div class="label">Tools</div><div class="tags">${tools}</div>
@@ -184,6 +197,7 @@ function viewAgent(name) {
         ${podsHTML}
       </div>
     `;
+    if (sp.memory) fillAgentMemCount(a.metadata.name);
   });
 }
 
@@ -203,6 +217,15 @@ function editAgent(name) {
     const pinnedImage = sp.runtime && sp.runtime.image ? sp.runtime.image : '';
     const gr = sp.guardrails || {};
     const group = a.metadata.labels && a.metadata.labels['app.kubernetes.io/component'] || 'general';
+    // Explicit opt-in (spec 34): a memory-less agent shows Session (the unset
+    // mapping) but its behavior is only SENT if the user touches a memory
+    // control — otherwise the edit preserves spec.memory (nil or legacy Type)
+    // untouched. _editMemTouched is flipped by the onchange handlers below.
+    window._editMemTouched = false;
+    const editMemBehavior = (sp.memory && (sp.memory.behavior || behaviorForType(sp.memory.type))) || 'session';
+    const editMemType = sp.memory && sp.memory.type && !sp.memory.behavior ? sp.memory.type : '';
+    const editMemScope = (sp.memory && sp.memory.scope) || 'agent';
+    const editMemCtx = (sp.memory && sp.memory.maxContextTokens) || 2048;
 
     const toolGroups = {};
     for (const t of state.mcpTools) {
@@ -244,6 +267,22 @@ function editAgent(name) {
             <option value="supervised" ${sp.autonomyLevel==='supervised'?'selected':''}>Supervised</option>
             <option value="full" ${sp.autonomyLevel==='full'?'selected':''}>Full</option>
           </select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
+          <label>Memory</label>
+          <div>
+            <div class="mem-cards">
+              <label class="mem-card"><input type="radio" name="edit-mem" value="off" onchange="window._editMemTouched=true" ${editMemBehavior==='off'?'checked':''}><span class="mem-card-t">Off</span><span class="mem-card-d">Clean slate every run</span></label>
+              <label class="mem-card"><input type="radio" name="edit-mem" value="session" onchange="window._editMemTouched=true" ${editMemBehavior==='session'?'checked':''}><span class="mem-card-t">Session</span><span class="mem-card-d">Remembers within one workflow run</span></label>
+              <label class="mem-card"><input type="radio" name="edit-mem" value="persistent" onchange="window._editMemTouched=true" ${editMemBehavior==='persistent'?'checked':''}><span class="mem-card-t">Persistent</span><span class="mem-card-d">Remembers across runs and learns from results</span></label>
+            </div>
+            ${editMemType ? `<div style="font-size:11px;color:var(--dim);margin-top:6px">migrated from <span class="tag" style="font-size:9px">${esc(editMemType)}</span></div>` : ''}
+            <details class="mem-adv"><summary>Advanced</summary>
+              <div class="mem-adv-row">
+                <label>Scope <select id="edit-mem-scope" onchange="window._editMemTouched=true"><option value="agent" ${editMemScope==='agent'?'selected':''}>Agent</option><option value="group" ${editMemScope==='group'?'selected':''}>Group</option><option value="namespace" ${editMemScope==='namespace'?'selected':''}>Namespace</option></select></label>
+                <label>Provider <select id="edit-mem-provider" onchange="window._editMemTouched=true"><option value="">Platform default</option></select><!-- static placeholder: populate from /api/memory/providers when non-builtin providers land --></label>
+                <label>Context budget <input id="edit-mem-ctx" type="number" value="${editMemCtx}" min="0" max="32768" oninput="window._editMemTouched=true"></label>
+              </div>
+            </details>
+          </div>
           <label>Image</label>
           <div>
             <select id="edit-image" onchange="document.getElementById('edit-image-custom').style.display=this.value==='__custom__'?'':'none'">
@@ -299,6 +338,13 @@ function saveAgent(name) {
     costLimit: parseFloat(document.getElementById('edit-gr-cost').value) || 0,
     maxExecutionTime: document.getElementById('edit-gr-time').value.trim(),
     rollbackOnFailure: document.getElementById('edit-gr-rollback').value === 'true',
+    // Only send memory when the user actually touched a memory control
+    // (explicit opt-in) — otherwise an empty behavior leaves spec.memory as-is
+    // server-side (preserves legacy Type / memory-less on unrelated edits).
+    memoryBehavior: window._editMemTouched ? ((document.querySelector('input[name="edit-mem"]:checked') || {}).value || '') : '',
+    memoryScope: document.getElementById('edit-mem-scope').value,
+    memoryProviderRef: document.getElementById('edit-mem-provider').value,
+    memoryMaxContextTokens: Math.min(parseInt(document.getElementById('edit-mem-ctx').value, 10) || 0, 32768),
   };
   fetch('/api/update/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
@@ -346,7 +392,21 @@ function renderCreateAgentForm() {
         <select id="ca-model"><option value="claude-sonnet-4-6">Claude Sonnet 4.6</option><option value="claude-opus-4-6">Claude Opus 4.6</option><option value="claude-haiku-4-5">Claude Haiku 4.5</option><option value="gpt-4o">GPT-4o</option></select>
         <label>Temperature</label><div class="range-group"><input type="range" id="ca-temp" min="0" max="2" step="0.1" value="0.1" oninput="document.getElementById('ca-temp-val').textContent=this.value"><span id="ca-temp-val" class="mono">0.1</span></div>
         <label>Autonomy</label><div><select id="ca-autonomy"><option value="restricted">Restricted</option><option value="supervised">Supervised</option><option value="full">Full</option></select><div style="font-size:10px;color:var(--dim);margin-top:4px">Sets the Shu-Ha-Ri starting level: restricted &rarr; Shu, supervised &rarr; Ha, full &rarr; Ri. Agents then earn (or lose) autonomy via AgentAutonomyPolicy.</div></div>
-        <label>Memory</label><select id="ca-memory"><option value="buffer">Buffer</option><option value="summary">Summary</option><option value="vector">Vector</option><option value="none">None</option></select>
+        <label>Memory</label>
+        <div>
+          <div class="mem-cards">
+            <label class="mem-card"><input type="radio" name="ca-mem" value="off"><span class="mem-card-t">Off</span><span class="mem-card-d">Clean slate every run</span></label>
+            <label class="mem-card"><input type="radio" name="ca-mem" value="session"><span class="mem-card-t">Session</span><span class="mem-card-d">Remembers within one workflow run</span></label>
+            <label class="mem-card"><input type="radio" name="ca-mem" value="persistent" checked><span class="mem-card-t">Persistent</span><span class="mem-card-d">Remembers across runs and learns from results</span></label>
+          </div>
+          <details class="mem-adv"><summary>Advanced</summary>
+            <div class="mem-adv-row">
+              <label>Scope <select id="ca-mem-scope"><option value="agent">Agent</option><option value="group">Group</option><option value="namespace">Namespace</option></select></label>
+              <label>Provider <select id="ca-mem-provider"><option value="">Platform default</option></select><!-- static placeholder: populate from /api/memory/providers when non-builtin providers land --></label>
+              <label>Context budget <input id="ca-mem-ctx" type="number" value="2048" min="0" max="32768"></label>
+            </div>
+          </details>
+        </div>
         <label>Image</label><div><select id="ca-image" onchange="document.getElementById('ca-image-custom').style.display=this.value==='__custom__'?'':'none'"><option value="">Default (operator executor image)</option><option value="__custom__">Custom image&hellip;</option></select><input id="ca-image-custom" placeholder="registry/image:tag" spellcheck="false" style="display:none;margin-top:6px"></div>
         <label>Group</label>
         <select id="ca-group"><option value="general">General</option><option value="platform-health">Platform Health</option><option value="incident-management">Incident Management</option><option value="observability">Observability</option><option value="security-compliance">Security</option><option value="sdlc">SDLC</option><option value="ci-cd">CI/CD</option><option value="capacity-cost">Capacity & Cost</option></select>
@@ -375,7 +435,10 @@ function createAgent() {
     model: document.getElementById('ca-model').value,
     temperature: parseFloat(document.getElementById('ca-temp').value),
     autonomy: document.getElementById('ca-autonomy').value,
-    memory: document.getElementById('ca-memory').value,
+    memoryBehavior: (document.querySelector('input[name="ca-mem"]:checked') || {}).value || 'persistent',
+    memoryScope: document.getElementById('ca-mem-scope').value,
+    memoryProviderRef: document.getElementById('ca-mem-provider').value,
+    memoryMaxContextTokens: Math.min(parseInt(document.getElementById('ca-mem-ctx').value, 10) || 0, 32768),
     role: document.getElementById('ca-role').value,
     image: document.getElementById('ca-image').value === '__custom__' ? document.getElementById('ca-image-custom').value.trim() : '',
     group: document.getElementById('ca-group').value,
@@ -386,6 +449,12 @@ function createAgent() {
     minReplicas: 1, maxReplicas: 3, targetCPU: 70,
   };
   if (!body.name) { showResult('ca-result', 'err', 'Name required'); return; }
+  // Group memory scope needs the component label; the webhook denies a
+  // group-scoped agent without a real Group set. Guard client-side so the
+  // user gets a clear message instead of a webhook rejection.
+  if (body.memoryScope === 'group' && (!body.group || body.group === 'general')) {
+    showResult('ca-result', 'err', 'Group memory scope requires setting a Group above'); return;
+  }
   fetch('/api/create/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(r => r.json())
     .then(d => {

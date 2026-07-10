@@ -30,6 +30,31 @@ operator:
     enabled: true
     storageSize: 1Gi
     storageClass: ""  # empty = cluster default storage class
+  # Built-in memory provider (Spec 34): SQLite+FTS5 on the SAME PVC as history.
+  # On by default; forget is disabled until Spec 32 authz middleware ships.
+  #
+  # Toggle semantics: `enabled: false` renders PURKO_MEMORY_ENABLED="false" and
+  # the operator skips opening the SQLite store. Disabled only on the EXACT
+  # string "false" — absent or any other value leaves memory on.
+  #
+  # Upgrade note: memory.enabled defaults to true, so an existing install that
+  # had only history.enabled=false will gain a PVC on the next `helm upgrade`.
+  # Set memory.enabled=false explicitly before upgrading to suppress the PVC.
+  #
+  # Path: the memory store lives at /var/lib/purko/memory.db (same PVC as
+  # history). This path is not a Helm value; set PURKO_MEMORY_PATH as an extra
+  # env var if you need to relocate it.
+  memory:
+    enabled: true
+    forgetEnabled: false
+    # INFORMATIONAL ONLY — these values MIRROR the built-in MemoryProvider CR's
+    # defaults (examples/memory-providers/builtin.yaml) for documentation
+    # purposes. They are NOT wired to any operator env var; the operator reads
+    # retention settings exclusively from the MemoryProvider CR at runtime.
+    # To change retention, edit the MemoryProvider CR — not these values.
+    retention:
+      maxEntriesPerScope: 500
+      recallLogMaxAgeDays: 90
 
 # License tier for limits and history retention. The community edition
 # defaults to "community" (7-day history retention, community limits).

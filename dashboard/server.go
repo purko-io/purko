@@ -24,6 +24,7 @@ import (
 
 	v1alpha1 "github.com/purko-io/purko/api/v1alpha1"
 	"github.com/purko-io/purko/pkg/history"
+	"github.com/purko-io/purko/pkg/memory"
 )
 
 // llmProviderNamespace is where LLMProvider CRs live — it must match the
@@ -40,6 +41,7 @@ type Server struct {
 	IntentLLM LLMProvider   // Opus-based LLM for intent workflow design
 	Namespace string        // default namespace for agents/workflows
 	History   history.Store // optional execution history archive (Spec 24)
+	Memory    memory.Store  // optional built-in memory provider (Spec 34)
 	mu        sync.Mutex
 }
 
@@ -141,6 +143,10 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/api/history/runs", s.handleHistoryRuns)
 	mux.HandleFunc("/api/history/run/", s.handleHistoryRunDetail)
 	mux.HandleFunc("/api/history/step/", s.handleHistoryStepTools)
+	mux.HandleFunc("/api/memory", s.handleMemory)
+	mux.HandleFunc("/api/memory/stats", s.handleMemoryStats)
+	mux.HandleFunc("/api/memory/recall", s.handleMemoryRecall)
+	mux.HandleFunc("/api/memory/", s.handleMemoryDelete) // /api/memory/{id}
 	mux.HandleFunc("/api/features", s.handleFeatures)
 	mux.HandleFunc("/api/whoami", s.handleWhoami)
 	s.registerProHandlers(mux) // pro: intent + autonomy; community: no-op
@@ -319,26 +325,49 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateAgentRequest struct {
-	Name              string   `json:"name"`
-	Namespace         string   `json:"namespace"`
-	Type              string   `json:"type"`
-	Provider          string   `json:"provider"`
-	Model             string   `json:"model"`
-	Temperature       float64  `json:"temperature"`
-	Autonomy          string   `json:"autonomy"`
-	Memory            string   `json:"memory"`
-	Role              string   `json:"role"`
-	Image             *string  `json:"image"`
-	Group             string   `json:"group"`
-	CostLimit         float64  `json:"costLimit"`
-	MaxIterations     int      `json:"maxIterations"`
-	MaxExecutionTime  string   `json:"maxExecutionTime"`
-	RollbackOnFailure *bool    `json:"rollbackOnFailure"`
-	SystemPrompt      string   `json:"systemPrompt"`
-	Tools             []string `json:"tools"`
-	MinReplicas       int      `json:"minReplicas"`
-	MaxReplicas       int      `json:"maxReplicas"`
-	TargetCPU         int      `json:"targetCPU"`
+	Name                   string   `json:"name"`
+	Namespace              string   `json:"namespace"`
+	Type                   string   `json:"type"`
+	Provider               string   `json:"provider"`
+	Model                  string   `json:"model"`
+	Temperature            float64  `json:"temperature"`
+	Autonomy               string   `json:"autonomy"`
+	Memory                 string   `json:"memory"` // Deprecated: use MemoryBehavior (kept for back-compat)
+	MemoryBehavior         string   `json:"memoryBehavior,omitempty"`
+	MemoryScope            string   `json:"memoryScope,omitempty"`
+	MemoryProviderRef      string   `json:"memoryProviderRef,omitempty"`
+	MemoryMaxContextTokens int      `json:"memoryMaxContextTokens,omitempty"`
+	Role                   string   `json:"role"`
+	Image                  *string  `json:"image"`
+	Group                  string   `json:"group"`
+	CostLimit              float64  `json:"costLimit"`
+	MaxIterations          int      `json:"maxIterations"`
+	MaxExecutionTime       string   `json:"maxExecutionTime"`
+	RollbackOnFailure      *bool    `json:"rollbackOnFailure"`
+	SystemPrompt           string   `json:"systemPrompt"`
+	Tools                  []string `json:"tools"`
+	MinReplicas            int      `json:"minReplicas"`
+	MaxReplicas            int      `json:"maxReplicas"`
+	TargetCPU              int      `json:"targetCPU"`
+}
+
+// memorySpecFromRequest builds a MemorySpec from the dashboard form's discrete
+// memory fields (Spec 34 §8). Empty behavior -> nil (CRD default = session).
+func memorySpecFromRequest(behavior, scope, providerRef string, maxCtx int) *v1alpha1.MemorySpec {
+	if behavior == "" {
+		return nil
+	}
+	m := &v1alpha1.MemorySpec{Behavior: behavior}
+	if scope != "" && scope != "agent" {
+		m.Scope = scope
+	}
+	if providerRef != "" {
+		m.ProviderRef = providerRef
+	}
+	if maxCtx > 0 {
+		m.MaxContextTokens = &maxCtx
+	}
+	return m
 }
 
 type CreateWorkflowRequest struct {
@@ -400,8 +429,8 @@ func (s *Server) handleCreateAgent(w http.ResponseWriter, r *http.Request) {
 	agent.Spec.Model.Name = req.Model
 	agent.Spec.Model.Temperature = &temp
 	agent.Spec.AutonomyLevel = req.Autonomy
-	if req.Memory != "" && req.Memory != "buffer" {
-		agent.Spec.Memory = &v1alpha1.MemorySpec{Type: req.Memory}
+	if m := memorySpecFromRequest(req.MemoryBehavior, req.MemoryScope, req.MemoryProviderRef, req.MemoryMaxContextTokens); m != nil {
+		agent.Spec.Memory = m
 	}
 	if req.Group != "" && req.Group != "general" {
 		agent.Labels = map[string]string{
@@ -631,6 +660,23 @@ func (s *Server) handleUpdateAgent(w http.ResponseWriter, r *http.Request) {
 			agent.Labels = map[string]string{}
 		}
 		agent.Labels["app.kubernetes.io/component"] = req.Group
+	}
+	// Memory: explicit opt-in. The edit form sends an empty behavior when the
+	// user did not touch the memory controls, so m is nil and spec.memory is
+	// left exactly as-is — preserving a legacy Type path or a memory-less
+	// agent untouched on unrelated edits (spec 34 §Mapping-semantics). When a
+	// spec IS produced, overlay only the form-owned fields onto any existing
+	// spec so legacy Type/PersistentStorage/TTL/MaxEntries survive an
+	// intentional behavior change.
+	if m := memorySpecFromRequest(req.MemoryBehavior, req.MemoryScope, req.MemoryProviderRef, req.MemoryMaxContextTokens); m != nil {
+		if agent.Spec.Memory != nil {
+			agent.Spec.Memory.Behavior = m.Behavior
+			agent.Spec.Memory.Scope = m.Scope
+			agent.Spec.Memory.ProviderRef = m.ProviderRef
+			agent.Spec.Memory.MaxContextTokens = m.MaxContextTokens
+		} else {
+			agent.Spec.Memory = m
+		}
 	}
 
 	// Merge guardrails: overlay provided values, preserve everything else

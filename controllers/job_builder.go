@@ -49,7 +49,7 @@ func buildJobName(workflowName, stepName, runID string) string {
 
 // buildStepJob creates a Kubernetes Job spec for a workflow step.
 // mcpServersJSON is a JSON array of MCP server configs (from the registry).
-func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1alpha1.Agent, runID string, stepInput json.RawMessage, inputFromEnvs []corev1.EnvVar, mcpServersJSON string, llmProvider *v1alpha1.LLMProvider, llmAPIKey string) *batchv1.Job {
+func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1alpha1.Agent, runID string, stepInput json.RawMessage, inputFromEnvs []corev1.EnvVar, mcpServersJSON string, llmProvider *v1alpha1.LLMProvider, llmAPIKey string, recalledMemory string) *batchv1.Job {
 	jobName := buildJobName(wf.Name, step.Name, runID)
 
 	// Determine image: agent runtime image > chart-provided PURKO_EXECUTOR_IMAGE
@@ -235,18 +235,9 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 		}
 	}
 
-	// Memory configuration
-	memoryType := "buffer"
-	if agent.Spec.Memory != nil && agent.Spec.Memory.Type != "" {
-		memoryType = agent.Spec.Memory.Type
-	}
-	env = append(env, corev1.EnvVar{Name: "MEMORY_TYPE", Value: memoryType})
-	if memoryType == "summary" {
-		env = append(env, corev1.EnvVar{Name: "MEMORY_CM_NAME", Value: agent.Name + "-memory"})
-	}
-	if agent.Spec.Memory != nil && agent.Spec.Memory.MaxContextTokens != nil {
-		env = append(env, corev1.EnvVar{Name: "MAX_CONTEXT_TOKENS", Value: fmt.Sprintf("%d", *agent.Spec.Memory.MaxContextTokens)})
-	}
+	// Memory configuration (Spec 34): behavior-aware env; recalledMemory is
+	// computed by the controller before buildStepJob and passed in.
+	env = append(env, buildMemoryEnv(agent, recalledMemory)...)
 
 	// Code execution config
 	if agent.Spec.Runtime != nil && agent.Spec.Runtime.CodeExecution != nil && agent.Spec.Runtime.CodeExecution.Enabled {
@@ -396,7 +387,7 @@ func buildStepJob(wf *v1alpha1.Workflow, step v1alpha1.WorkflowStep, agent *v1al
 						}
 					}
 					// Mount vector memory PVC if configured
-					if memoryType == "vector" && agent.Spec.Memory != nil &&
+					if memoryEnvType(agent) == "vector" && agent.Spec.Memory != nil &&
 						agent.Spec.Memory.PersistentStorage != nil &&
 						agent.Spec.Memory.PersistentStorage.Enabled {
 						pvcName := agent.Spec.Memory.PersistentStorage.VolumeClaimRef
@@ -452,4 +443,29 @@ func boolPtr(b bool) *bool {
 
 func int64Ptr(i int64) *int64 {
 	return &i
+}
+
+// buildMemoryEnv emits the memory env vars for a step (Spec 34 §1/§3). For
+// behavior=persistent it always sets AGENT_MEMORY (possibly empty) plus
+// MEMORY_BEHAVIOR; legacy type keeps MEMORY_CM_NAME for summary. The executor
+// protocol is unchanged — new vars are additive.
+func buildMemoryEnv(agent *v1alpha1.Agent, recalledMemory string) []corev1.EnvVar {
+	env := []corev1.EnvVar{{Name: "MEMORY_TYPE", Value: memoryEnvType(agent)}}
+	behavior := memoryBehavior(agent)
+	// Only emit MEMORY_BEHAVIOR when the caller explicitly set it in the spec
+	// (nil or empty Behavior = the session/buffer default — no env var needed).
+	if agent.Spec.Memory != nil && agent.Spec.Memory.Behavior != "" {
+		env = append(env, corev1.EnvVar{Name: "MEMORY_BEHAVIOR", Value: behavior})
+	}
+	if behavior == "persistent" {
+		env = append(env, corev1.EnvVar{Name: "AGENT_MEMORY", Value: recalledMemory})
+	}
+	// Legacy summary path keeps its ConfigMap env (dead-code recall, harmless).
+	if behavior == "" && agent.Spec.Memory != nil && agent.Spec.Memory.Type == "summary" {
+		env = append(env, corev1.EnvVar{Name: "MEMORY_CM_NAME", Value: agent.Name + "-memory"})
+	}
+	if agent.Spec.Memory != nil && agent.Spec.Memory.MaxContextTokens != nil {
+		env = append(env, corev1.EnvVar{Name: "MAX_CONTEXT_TOKENS", Value: fmt.Sprintf("%d", *agent.Spec.Memory.MaxContextTokens)})
+	}
+	return env
 }

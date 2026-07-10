@@ -65,6 +65,23 @@ Any additional keys in the JSON are preserved as step output and available to do
 - **0** -- success. The controller reads the `OUTPUT:` line.
 - **Non-zero** -- failure. The controller reads the last 20 lines of logs as the error message.
 
+### Memory
+
+Custom executors require **no changes** to gain agent memory. Memory is controller-mediated: the operator handles recall and persistence on behalf of the executor, using the same environment variable and output key that have always existed.
+
+**Recall:** when the agent's `spec.memory.behavior` is `persistent`, the operator queries the memory store before launching the Job and injects recalled entries as the `AGENT_MEMORY` environment variable. The built-in executor prepends this to the system prompt automatically; a custom executor can read `AGENT_MEMORY` directly and use it however it chooses. No new environment variables, volumes, or output keys are required.
+
+**Store:** to let the operator persist a memory entry for future runs, include `_memory_update` in your OUTPUT JSON. Format it as a plain `Task: <task summary> | Result: <result summary>` string — do not include a workflow or step prefix; the controller adds provenance metadata when storing:
+
+```
+OUTPUT:{"response":"...","_memory_update":"Task: checked pod health in ns default | Result: all 12 pods running"}
+```
+
+Any executor that already emits `_memory_update` in this format gains persistent memory automatically when `behavior: persistent` is set on the agent — no code changes required.
+
+!!! tip
+    The `MEMORY_BEHAVIOR` environment variable is an informational hint the controller sets alongside `MEMORY_TYPE`. Custom executors may inspect it to branch on behavior, but they are not required to.
+
 ## Building a Custom Executor
 
 ### Minimal Example: Bash Health Check
