@@ -639,7 +639,10 @@ def save_memory(conversation, output):
                 result_summary = str(output['response'])[:500]
             elif 'status' in output:
                 result_summary = f"Status: {output['status']}"
-        summary = f"[{WORKFLOW_NAME}/{STEP_NAME}] Task: {task} | Result: {result_summary}"
+        # No [workflow/step] prefix: the controller stores workflow/step as
+        # structured fields and re-adds provenance (with date) when recalling,
+        # so a prefix here would double-label the recalled block.
+        summary = f"Task: {task} | Result: {result_summary}"
         return summary
 
     if MEMORY_TYPE == 'vector':
