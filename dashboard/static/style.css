@@ -1039,3 +1039,41 @@ tr:hover td { background: color-mix(in srgb, var(--accent) 3%, transparent); }
 .hfoot b { color: var(--text); }
 .hfoot a { color: var(--accent); text-decoration: none; margin-left: auto; }
 .hfoot a:hover { text-decoration: underline; }
+
+/* ── Memory page (Spec 34 §8) ────────────── */
+
+.mem-stats { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 4px 0 14px; font-size: 13px; color: var(--dim); }
+.mem-stat b { color: var(--text-bright); }
+.mem-health { margin-left: 8px; padding: 2px 8px; border-radius: var(--radius-xs); font-size: 10px; font-weight: 600; }
+.mem-health--ok { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+.mem-health--bad { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); cursor: help; }
+.mem-agents { display: flex; gap: 6px; flex-wrap: wrap; }
+.mem-search { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.mem-input { flex: 1; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--inset-deep); color: var(--text); font-family: var(--font); }
+.mem-input:focus { outline: none; border-color: var(--glass-border); box-shadow: 0 0 0 2px var(--accent-glow); }
+.mem-list { display: flex; flex-direction: column; gap: 8px; }
+.mem-item { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--inset-soft); border: 1px solid var(--border); }
+.mem-content { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.mem-meta { display: flex; align-items: center; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--dim); }
+.mem-forget { margin-left: auto; padding: 3px 10px; border-radius: var(--radius-xs); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); font-size: 11px; cursor: pointer; }
+.mem-forget:hover { background: color-mix(in srgb, var(--red) 20%, transparent); }
+
+/* ── Memory behavior cards (Spec 34 §8) ──── */
+
+.mem-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mem-card { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--inset-soft); }
+.mem-card input { display: none; }
+.mem-card:has(input:checked) { border-color: var(--accent); background: var(--accent-glow); }
+.mem-card-t { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.mem-card-d { font-size: 11px; color: var(--dim); }
+.mem-adv { margin-top: 10px; }
+.mem-adv summary { font-size: 12px; color: var(--accent); cursor: pointer; }
+.mem-adv-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--dim); }
+
+/* ── Recalled-context panel (Spec 34 §8) ─── */
+
+.recalled-toggle { margin-top: 8px; padding: 4px 10px; border-radius: var(--radius-xs); border: 1px solid var(--border); background: var(--accent-glow); color: var(--accent); font-size: 11px; cursor: pointer; }
+.recalled-box { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.recalled-item { padding: 8px 10px; border-radius: var(--radius-xs); background: var(--inset-soft); border: 1px solid var(--border); font-size: 12px; color: var(--text); }
+.recalled-item .mono { color: var(--dim); font-size: 10px; margin-bottom: 3px; }
+.recalled-gone { color: var(--dim); font-style: italic; }

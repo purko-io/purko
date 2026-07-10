@@ -317,6 +317,9 @@ func main() {
 		if historyStore != nil {
 			dash.History = historyStore
 		}
+		if memoryStore != nil {
+			dash.Memory = memoryStore
+		}
 		go func() {
 			if err := dash.Start(ctx); err != nil && err != http.ErrServerClosed {
 				logger.Error(err, "dashboard server failed")

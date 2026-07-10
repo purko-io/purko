@@ -127,6 +127,7 @@ function viewWorkflow(name) {
   if (location.hash !== hash) history.replaceState(null, '', hash);
   fetch('/api/workflow/' + name).then(r => r.json()).then(d => {
     const w = d.workflow;
+    const runId = (w.metadata.annotations || {})['purko.io/run-id'] || '';
     const steps = w.spec.steps || [];
     const statuses = {};
     (w.status.stepStatuses || []).forEach(s => statuses[s.name] = s);
@@ -186,7 +187,7 @@ function viewWorkflow(name) {
           : '';
         outputHTML += `<details><summary class="mono clickable" style="padding:6px 0">${escapedStep}
           ${followUpBtn}
-        </summary>${content}</details>`;
+        </summary>${content}${recalledPanelHTML(runId, k, 0)}</details>`;
       }
       outputHTML += '</div>';
     }
@@ -946,4 +947,29 @@ async function deployBuilderWf() {
     showResult('wfb-result', 'ok', `Workflow "${d.name}" deployed!`);
     setTimeout(() => viewWorkflow(d.name), 3000);
   }
+}
+
+// ── Context recalled panel (Spec 34 §8) ────────────────────────────
+
+// toggleRecalled lazy-loads recall_log for a step on expand (mirrors history.js toggle).
+function toggleRecalled(runId, step, btn) {
+  const box = btn.nextElementSibling;
+  const open = box.style.display === 'block';
+  box.style.display = open ? 'none' : 'block';
+  if (open || box.dataset.loaded) return;
+  box.dataset.loaded = '1';
+  const p = new URLSearchParams({ runId, step });
+  fetch('/api/memory/recall?' + p.toString()).then(r => (r.ok ? r.json() : { entries: [], danglingIds: [] })).then(d => {
+    const items = (d.entries || []).map(e =>
+      `<div class="recalled-item"><div class="mono">${esc(e.agent)} · ${esc(e.createdAt ? new Date(e.createdAt).toLocaleString() : '')}</div><div>${esc(e.content)}</div></div>`).join('');
+    const dangling = (d.danglingIds || []).map(() => '<div class="recalled-item recalled-gone">memory deleted</div>').join('');
+    box.innerHTML = (items + dangling) || '<div class="empty">No context recalled for this step.</div>';
+    const n = (d.entries || []).length;
+    btn.textContent = 'Context recalled (' + n + ') ▾';
+  });
+}
+
+function recalledPanelHTML(runId, step, count) {
+  if (!runId) return '';
+  return `<button class="recalled-toggle" onclick="toggleRecalled('${esc(runId)}','${esc(step)}',this)">Context recalled${count ? ' (' + count + ')' : ''} ▾</button><div class="recalled-box" style="display:none"></div>`;
 }
