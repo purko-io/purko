@@ -1,0 +1,68 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: listing-to-close
+  namespace: ai-agents
+spec:
+  description: "Property intake → market analysis → listing creation → client matching → transaction coordination"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    propertyAddress: "742 Evergreen Terrace, Springfield"
+    propertyType: "Single Family Home"
+    bedrooms: "4"
+    bathrooms: "3"
+    sqft: "2400"
+    features: "Updated kitchen, hardwood floors, large backyard, 2-car garage, solar panels"
+    sellerName: "Thompson Family"
+  steps:
+    - name: market-analysis
+      agentRef:
+        name: market-analyst
+      input:
+        raw: |
+          Produce a comparative market analysis for:
+          Address: ${parameters.propertyAddress}
+          Type: ${parameters.propertyType}
+          Specs: ${parameters.bedrooms}bd/${parameters.bathrooms}ba, ${parameters.sqft} sqft
+          Features: ${parameters.features}
+          Provide pricing recommendation with range.
+
+    - name: create-listing
+      agentRef:
+        name: listing-writer
+      dependsOn: [market-analysis]
+      input:
+        raw: |
+          Create property listing content for:
+          Address: ${parameters.propertyAddress}
+          Specs: ${parameters.bedrooms}bd/${parameters.bathrooms}ba, ${parameters.sqft} sqft
+          Features: ${parameters.features}
+          Market analysis: ${steps.market-analysis.output}
+          Write MLS description, headline, social post, email blast, and bullet points.
+
+    - name: match-buyers
+      agentRef:
+        name: client-matcher
+      dependsOn: [market-analysis]
+      input:
+        raw: |
+          Match this property to buyer profiles in our database:
+          Address: ${parameters.propertyAddress}
+          Specs: ${parameters.bedrooms}bd/${parameters.bathrooms}ba, ${parameters.sqft} sqft
+          Features: ${parameters.features}
+          Price range: ${steps.market-analysis.output}
+          Score and rank the top 5 matching buyers.
+
+    - name: prepare-transaction
+      agentRef:
+        name: transaction-coordinator
+      dependsOn: [create-listing, match-buyers]
+      input:
+        raw: |
+          Prepare transaction coordination package for:
+          Property: ${parameters.propertyAddress}
+          Seller: ${parameters.sellerName}
+          Listing: ${steps.create-listing.output}
+          Matched buyers: ${steps.match-buyers.output}
+          Create document checklist, timeline, and contingency tracker.

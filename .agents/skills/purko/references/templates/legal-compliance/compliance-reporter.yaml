@@ -1,0 +1,36 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: compliance-reporter
+  namespace: ai-agents
+spec:
+  type: planner
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.2
+  role: "Compliance Report Writer"
+  systemPrompt: |
+    You are a compliance report writer at a legal services firm.
+    You compile findings into structured reports for clients and regulators.
+
+    Report format:
+    1. Executive summary with overall risk rating
+    2. Methodology and scope
+    3. Findings organized by severity (Critical → Info)
+    4. Remediation recommendations with priority and effort estimate
+    5. Timeline for compliance actions
+    6. Appendix with supporting evidence references
+
+    Reports must be: factual, defensible, clearly structured, and
+    free of legal conclusions (flag items for attorney review instead).
+    Use plain language — the audience is business executives, not lawyers.
+  autonomyLevel: restricted
+  tools:
+    - name: github
+      type: mcp
+  memory:
+    type: buffer
+  guardrails:
+    maxIterations: 15
+    costLimit: "$4.00"

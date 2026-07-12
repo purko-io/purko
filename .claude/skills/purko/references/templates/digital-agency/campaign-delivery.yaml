@@ -1,0 +1,83 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: campaign-delivery
+  namespace: ai-agents
+spec:
+  description: "Client brief → Strategy → Content → Review → Delivery package"
+  parallelism: 3
+  failureStrategy: continueOnError
+  parameters:
+    clientName: "Acme Corp"
+    briefContent: "Launch campaign for new SaaS product targeting CTOs at mid-market companies. Tone: professional but approachable. Goal: 500 demo signups in 30 days."
+    channels: "social,email,blog"
+  steps:
+    - name: create-strategy
+      agentRef:
+        name: campaign-strategist
+      input:
+        raw: |
+          Client: ${parameters.clientName}
+          Brief: ${parameters.briefContent}
+          Requested channels: ${parameters.channels}
+          Produce a complete campaign strategy with target audience, key messages, channel plan, content calendar, and KPIs.
+
+    - name: write-social
+      agentRef:
+        name: content-writer
+      dependsOn: [create-strategy]
+      input:
+        raw: |
+          Using the campaign strategy, write social media content for ${parameters.clientName}.
+          Produce: 3 LinkedIn posts, 5 tweets, and 3 Instagram captions.
+          Strategy context: ${steps.create-strategy.output.response}
+
+    - name: write-email
+      agentRef:
+        name: content-writer
+      dependsOn: [create-strategy]
+      input:
+        raw: |
+          Using the campaign strategy, write a 3-email nurture sequence for ${parameters.clientName}.
+          Emails: awareness, consideration, conversion.
+          Strategy context: ${steps.create-strategy.output.response}
+
+    - name: write-blog
+      agentRef:
+        name: content-writer
+      dependsOn: [create-strategy]
+      input:
+        raw: |
+          Using the campaign strategy, write a 1000-word SEO blog post for ${parameters.clientName}.
+          Strategy context: ${steps.create-strategy.output.response}
+
+    - name: review-content
+      agentRef:
+        name: brand-reviewer
+      dependsOn: [write-social, write-email, write-blog]
+      input:
+        raw: |
+          Review all campaign content for ${parameters.clientName} brand compliance.
+          Social posts: ${steps.write-social.output.response}
+          Email sequence: ${steps.write-email.output.response}
+          Blog post: ${steps.write-blog.output.response}
+
+    - name: revise-content
+      agentRef:
+        name: content-writer
+      dependsOn: [review-content]
+      input:
+        raw: |
+          Revise content based on reviewer feedback for ${parameters.clientName}.
+          Feedback: ${steps.review-content.output.response}
+
+    - name: package-deliverables
+      agentRef:
+        name: campaign-strategist
+      dependsOn: [review-content, revise-content]
+      input:
+        raw: |
+          Package all approved content into a final client deliverable for ${parameters.clientName}.
+          Organize by channel with publishing schedule.
+          Strategy: ${steps.create-strategy.output.response}
+          Content: ${steps.review-content.output.response}

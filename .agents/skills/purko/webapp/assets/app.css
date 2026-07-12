@@ -1,0 +1,344 @@
+/* ── font-face preamble (self-contained, no external requests) ── */
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-600.woff2') format('woff2'); font-weight: 500 600; font-style: normal; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-500.woff2') format('woff2'); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-600.woff2') format('woff2'); font-weight: 600; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-500.woff2') format('woff2'); font-weight: 500; }
+
+/* ═══════════════════════════════════════════════════════════
+   Atelier tokens + component styles — ported from proposals/O-atelier.html
+   Status palette: #2e7d4f #b07d10 #c0392b #2c5faa
+   Always glyph + label, never color alone.
+   ═══════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --paper:     #f7f3ec;
+  --paper-2:   #fffdf8;
+  --line:      #e2d9c8;
+  --line-ink:  #1c1917;
+  --ink:       #1c1917;
+  --ink-2:     #57534e;
+  --ink-3:     #9c948a;
+  --terra:     #0f8f86;   /* Purko brand teal */
+  --terra-bg:  #e1edea;
+  --ok:        #2e7d4f;
+  --ok-bg:     #e2eee6;
+  --warn:      #b07d10;
+  --warn-bg:   #f4ead2;
+  --fail:      #c0392b;
+  --fail-bg:   #f5e0dd;
+  --run:       #2c5faa;
+  --run-bg:    #e0e8f4;
+  --serif: 'Fraunces', serif;
+  --sans: 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+html, body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; min-height: 100vh;
+}
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 36px 80px; }
+
+/* ── masthead ───────────────────────────────────────────── */
+.masthead {
+  display: flex; align-items: baseline; gap: 20px;
+  padding: 26px 0 18px; border-bottom: 2px solid var(--line-ink);
+}
+.brand { font-family: var(--serif); font-weight: 600; font-size: 22px; letter-spacing: -0.3px; }
+.brand em { font-style: italic; font-weight: 400; color: var(--terra); }
+.masthead .right { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.live {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--ok);
+}
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.who { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.update-chip {
+  font-size: 12px; font-weight: 600; text-decoration: none;
+  color: var(--paper-2); background: var(--terra);
+  border-radius: 999px; padding: 3px 10px; letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.update-chip:hover { filter: brightness(1.08); }
+.dash-link {
+  font-size: 12px; font-weight: 600; text-decoration: none;
+  color: var(--ink); border: 1px solid var(--line-ink, var(--ink-2));
+  border-radius: 999px; padding: 3px 11px; white-space: nowrap;
+}
+.dash-link:hover { background: var(--ink); color: var(--paper); }
+
+/* ── gate ───────────────────────────────────────────────── */
+.gate {
+  background: var(--paper-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 26px 30px; margin-bottom: 44px;
+  position: relative; display: flex; gap: 26px; align-items: center;
+  box-shadow: 0 1px 0 var(--line), 0 12px 32px rgba(28,25,23,0.05);
+}
+.gate::before {
+  content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+  width: 3px; background: var(--warn); border-radius: 2px;
+}
+.gate-body { flex: 1; min-width: 0; }
+.gate-kicker {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--warn); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.gate-q { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: -0.2px; line-height: 1.35; }
+.gate-meta { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+.gate-meta b { color: var(--ink-2); font-weight: 500; }
+.gate-actions { display: flex; gap: 10px; flex: 0 0 auto; }
+.btn {
+  font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+  border-radius: 999px; padding: 11px 24px; cursor: pointer;
+  border: 1px solid var(--ink); transition: all .15s;
+}
+.btn.approve { background: var(--ink); color: var(--paper); }
+.btn.approve:hover { background: #000; box-shadow: 0 4px 14px rgba(28,25,23,0.25); }
+.btn.deny { background: transparent; color: var(--ink); }
+.btn.deny:hover { background: var(--fail-bg); border-color: var(--fail); color: var(--fail); }
+
+/* ── sections ───────────────────────────────────────────── */
+.cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 56px; align-items: start; }
+@media (max-width: 1024px) { .cols { grid-template-columns: 1fr; gap: 24px; } }
+h2 {
+  font-family: var(--serif); font-weight: 600; font-size: 17px; letter-spacing: -0.2px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line-ink);
+}
+h2 small { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 400; }
+section { margin-bottom: 44px; }
+
+/* ── status chips ───────────────────────────────────────── */
+.st {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.5px;
+  border-radius: 999px; padding: 4px 11px;
+}
+.st i { font-style: normal; }
+.st.running { color: var(--run); background: var(--run-bg); }
+.st.running i { display: inline-block; animation: spin 2.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.st.ok      { color: var(--ok); background: var(--ok-bg); }
+.st.waiting { color: var(--warn); background: var(--warn-bg); }
+.st.failed  { color: var(--fail); background: var(--fail-bg); }
+.st.idle    { color: var(--ink-3); background: #ede7db; }
+
+/* ── workflow entries: typographic timeline ─────────────── */
+.wf { padding: 20px 0 22px; border-bottom: 1px solid var(--line); }
+.wf:last-child { border-bottom: none; }
+.wf-head { display: flex; align-items: baseline; gap: 14px; }
+.wf-name { font-family: var(--serif); font-size: 19px; font-weight: 500; letter-spacing: -0.2px; }
+.wf-ns { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.wf-head .st { margin-left: auto; }
+
+.tl { display: flex; margin-top: 18px; }
+.tl-step { flex: 1; position: relative; padding-top: 16px; }
+.tl-step::before {   /* connecting line */
+  content: ''; position: absolute; top: 5px; left: 0; right: 0; height: 2px;
+  background: var(--line);
+}
+.tl-step::after {    /* node */
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--paper); border: 2px solid var(--ink-3);
+}
+/* queued = explicit default gray (Pending steps that are not the gate) */
+.tl-step.queued::after { background: var(--paper); border-color: var(--ink-3); }
+.tl-step.done::before { background: var(--ok); }
+.tl-step.done::after { background: var(--ok); border-color: var(--ok); }
+.tl-step.active::after { background: var(--paper); border-color: var(--run); box-shadow: 0 0 0 4px var(--run-bg); animation: pulse 1.6s ease-in-out infinite; }
+.tl-step.gated::after { background: var(--warn); border-color: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); animation: pulse 1.6s ease-in-out infinite; }
+.tl-step.failed::after { background: var(--fail); border-color: var(--fail); }
+.tl-name { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.tl-sub { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+.tl-step.done .tl-name { color: var(--ink-3); }
+.tl-step.gated .tl-name, .tl-step.active .tl-name { color: var(--ink); }
+.tl-step.failed .tl-name { color: var(--fail); }
+
+/* ── agent roster ───────────────────────────────────────── */
+.agent {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 2px; border-bottom: 1px solid var(--line);
+}
+.agent:last-child { border-bottom: none; }
+.agent-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+  display: grid; place-items: center;
+  font-family: var(--serif); font-weight: 600; font-size: 16px;
+  background: var(--paper-2); border: 1px solid var(--line); color: var(--ink-2);
+}
+.agent.working .agent-avatar { border: 2px solid var(--run); color: var(--run); }
+.agent-main { flex: 1; min-width: 0; }
+.agent-name { font-family: var(--serif); font-size: 15.5px; font-weight: 500; }
+.agent-name small { font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); font-weight: 400; margin-left: 8px; }
+.agent-task {
+  font-size: 12px; color: var(--ink-2); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-side { text-align: right; flex: 0 0 auto; }
+.agent-model { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 5px; }
+
+/* ── ledger (feed) ──────────────────────────────────────── */
+.feed { max-height: 420px; overflow: hidden; position: relative; }
+.feed::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+  background: linear-gradient(transparent, var(--paper)); pointer-events: none;
+}
+.ev {
+  display: grid; grid-template-columns: 52px 18px 1fr; gap: 12px; align-items: baseline;
+  padding: 9px 2px; border-bottom: 1px dotted var(--line); font-size: 13px;
+}
+.ev.new { animation: evIn .45s ease-out; }
+@keyframes evIn { from { opacity: 0; transform: translateY(-5px); } }
+.ev-t { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.ev-i { font-size: 11px; text-align: center; font-style: normal; }
+.ev-i.running { color: var(--run); } .ev-i.ok { color: var(--ok); }
+.ev-i.waiting { color: var(--warn); } .ev-i.failed { color: var(--fail); }
+.ev-m { color: var(--ink-2); line-height: 1.5; }
+.ev-m b { color: var(--ink); font-weight: 500; }
+
+/* ── login overlay ──────────────────────────────────────── */
+.login-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(247,243,236,0.9); backdrop-filter: blur(8px);
+  display: grid; place-items: center;
+}
+.login-card {
+  position: relative; width: 410px; max-width: 92vw;
+  background: var(--paper-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 40px 40px 30px;
+  box-shadow: 0 24px 70px rgba(28,25,23,0.18);
+}
+.login-title {
+  font-family: var(--serif); font-size: 24px; font-weight: 600;
+  letter-spacing: -0.3px; margin-bottom: 8px;
+}
+.login-title em { font-style: italic; font-weight: 400; color: var(--terra); }
+.login-sub { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-bottom: 20px; }
+.tok-row { display: flex; gap: 8px; }
+.tok-row input {
+  flex: 1; background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--ink); font-family: var(--mono); font-size: 12px; padding: 11px 13px; outline: none;
+}
+.tok-row input:focus { border-color: var(--ink-2); }
+.tok-row .btn { padding: 0 20px; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.login-error { color: #c0392b; font-size: 12px; min-height: 16px; margin-top: 8px; }
+.login-note { margin-top: 16px; font-size: 11px; color: var(--ink-3); line-height: 1.6; }
+.login-note code { font-family: var(--mono); }
+
+/* ── stats grid ─────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin: 26px 0 34px; }
+.stat { background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; }
+.stat .k { font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px; }
+.stat .v { font-family: var(--serif); font-size: 24px; }
+.stat .v small { font-family: var(--sans); font-size: 12px; color: var(--ink-3); margin-left: 8px; }
+.empty { background: var(--paper-2); border: 1px dashed var(--line); border-radius: 6px; padding: 30px; color: var(--ink-2); }
+.empty-title { font-family: var(--serif); font-size: 20px; margin-bottom: 8px; }
+.empty code { font-family: var(--mono); font-size: 11.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+/* ── nudge (community-tier contextual note) ─────────────── */
+.nudge {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  background: var(--terra-bg); border: 1px solid var(--terra);
+  border-radius: 4px; padding: 10px 16px; margin-bottom: 12px;
+  font-size: 13px; color: var(--ink-2);
+}
+.nudge-msg { flex: 1; min-width: 0; }
+.nudge-link { color: var(--terra); font-weight: 500; text-underline-offset: 2px; white-space: nowrap; }
+.nudge-dismiss {
+  background: none; border: none; cursor: pointer; flex-shrink: 0;
+  color: var(--ink-3); font-size: 15px; line-height: 1; padding: 0 0 0 4px;
+}
+.nudge-dismiss:hover { color: var(--ink); }
+[hidden] { display: none !important; }
+
+/* ── deep-link highlight ─────────────────────────────────── */
+.hl {
+  outline: 2px solid var(--terra);
+  box-shadow: 0 0 0 4px var(--terra-bg);
+  border-radius: 4px;
+  transition: outline-color .3s, box-shadow .3s;
+}
+
+/* ── outputs panel ───────────────────────────────────────── */
+.artifact-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 11px 2px; border-bottom: 1px solid var(--line);
+}
+.artifact-row:last-child { border-bottom: none; }
+
+.artifact-info {
+  display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; flex-wrap: wrap;
+}
+
+.artifact-name {
+  font-family: var(--mono); font-size: 12px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.artifact-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.3px;
+  background: var(--terra-bg); color: var(--terra);
+  border-radius: 999px; padding: 2px 8px; white-space: nowrap; flex-shrink: 0;
+}
+
+.artifact-provenance {
+  font-size: 11px; color: var(--ink-3); white-space: nowrap;
+}
+
+.artifact-size {
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); white-space: nowrap;
+}
+
+/* view / close buttons — ghost variant of the existing .btn pill */
+.artifact-row .btn,
+.artifact-expand-close {
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  border-radius: 999px; padding: 5px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent;
+  color: var(--ink-2); transition: border-color .15s, color .15s; flex-shrink: 0;
+}
+.artifact-row .btn:hover,
+.artifact-expand-close:hover { border-color: var(--ink-2); color: var(--ink); }
+
+.artifact-expand {
+  position: relative;
+  margin: 6px 0 6px 18px;
+  background: var(--paper-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 14px 16px;
+  overflow-x: auto;
+}
+
+.artifact-expand-close {
+  position: absolute; top: 8px; right: 10px;
+  padding: 2px 8px; font-size: 13px;
+}
+
+.artifact-content-name {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  margin-bottom: 10px;
+}
+
+.artifact-content { overflow-x: auto; }
+
+.artifact-pre {
+  font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  white-space: pre-wrap; overflow-x: auto; color: var(--ink);
+}
+
+.artifact-note {
+  font-size: 12px; color: var(--ink-3); font-style: italic;
+}
+
+.muted { color: var(--ink-3); font-size: 13px; padding: 12px 2px; }
+
+.err { color: var(--fail); font-size: 12px; }

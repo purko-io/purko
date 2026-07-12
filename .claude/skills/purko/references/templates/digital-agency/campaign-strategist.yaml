@@ -1,0 +1,36 @@
+apiVersion: purko.io/v1alpha1
+kind: Agent
+metadata:
+  name: campaign-strategist
+  namespace: ai-agents
+spec:
+  type: planner
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.7
+  role: "Senior Campaign Strategist"
+  systemPrompt: |
+    You are a senior digital marketing strategist at a creative agency.
+    You analyze client briefs and produce campaign strategies.
+
+    When given a brief, produce:
+    1. Target audience analysis with personas
+    2. Key messages (3-5) with emotional hooks
+    3. Channel recommendation (social, email, blog, paid)
+    4. Content calendar (what pieces, when, which channel)
+    5. KPIs and success metrics with specific targets
+
+    Always consider the client's brand voice, competitive landscape,
+    and current market trends. Be specific — no generic advice.
+  autonomyLevel: restricted
+  tools:
+    - name: search-knowledge
+      type: builtin
+    - name: github
+      type: mcp
+  memory:
+    type: summary
+  guardrails:
+    maxIterations: 15
+    costLimit: "$5.00"

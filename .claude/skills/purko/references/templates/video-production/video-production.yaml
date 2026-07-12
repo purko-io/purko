@@ -1,0 +1,66 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: video-production
+  namespace: ai-agents
+spec:
+  description: "Creative brief → script → shot planning → post-production brief → distribution strategy"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    projectName: "RetailMax Product Launch"
+    videoType: "Brand launch video"
+    duration: "2 minutes"
+    audience: "E-commerce business owners, 30-50, interested in scaling their online store"
+    keyMessage: "RetailMax AI analytics helps you understand your customers before they understand themselves"
+    platforms: "YouTube, LinkedIn, Instagram Reels, TikTok"
+  steps:
+    - name: write-script
+      agentRef:
+        name: script-writer
+      input:
+        raw: |
+          Write a ${parameters.duration} ${parameters.videoType} script.
+          Project: ${parameters.projectName}
+          Target audience: ${parameters.audience}
+          Key message: ${parameters.keyMessage}
+          Platforms: ${parameters.platforms}
+          Include hook, setup, body, and CTA with visual and audio directions.
+
+    - name: plan-shots
+      agentRef:
+        name: shot-planner
+      dependsOn: [write-script]
+      input:
+        raw: |
+          Create shot list and storyboard for:
+          Project: ${parameters.projectName}
+          Script: ${steps.write-script.output}
+          Include equipment list, location requirements, and shoot time estimate.
+
+    - name: post-production-brief
+      agentRef:
+        name: post-production-coordinator
+      dependsOn: [write-script, plan-shots]
+      input:
+        raw: |
+          Create post-production brief for:
+          Project: ${parameters.projectName}
+          Platforms: ${parameters.platforms}
+          Script: ${steps.write-script.output}
+          Shot plan: ${steps.plan-shots.output}
+          Include EDL, graphics specs, sound design brief, and platform-specific exports.
+
+    - name: distribution-plan
+      agentRef:
+        name: distribution-strategist
+      dependsOn: [write-script]
+      input:
+        raw: |
+          Create distribution strategy for:
+          Project: ${parameters.projectName}
+          Platforms: ${parameters.platforms}
+          Audience: ${parameters.audience}
+          Video type: ${parameters.videoType}
+          Script context: ${steps.write-script.output}
+          Include publishing schedule, SEO metadata, repurposing plan, and KPIs.
