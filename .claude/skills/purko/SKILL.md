@@ -13,8 +13,8 @@ Python 3 stdlib-only. Persisted config: `~/.config/purko-skill/config.json`.
 0a. **Version check** (interim, pre-marketplace; non-blocking): run
    `python3 scripts/version_check.py`. If the JSON has `"update_available": true`,
    surface ONE line to the user — "A newer Purko skill is available
-   (`<local>` → `<latest>`). What changed: `<changelog_url>` · update with
-   `git pull` (or re-run your installer)." — then continue the flow normally.
+   (`<local>` → `<latest>`). What changed: `<changelog_url>` · update by
+   re-running the installer: `curl -fsSL https://raw.githubusercontent.com/purko-io/purko/main/scripts/install-skill.sh | sh`" — then continue the flow normally.
    Silent-fail: on any error or `false`, say nothing and proceed. It is
    cached ~daily, so this is at most one network read per day.
 0. **Stack-reuse check**: `curl -s -m 2 http://127.0.0.1:8090/local/status`.
