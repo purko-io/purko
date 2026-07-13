@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Fake kubectl for tests. Behavior driven by env vars:
+#   FAKE_CONTEXTS         newline list for `config get-contexts -o name`
+#   FAKE_HAS_CRD          "yes" -> CRD probe (-o name) succeeds
+#   FAKE_CRD_VERSION      string -> returned for crd_version jsonpath query; absent -> exit 1
+#   FAKE_TOKEN_B64        base64 token for the secret read ("" -> not found)
+#   FAKE_REACHABLE        "yes" (default) -> /readyz probe succeeds; "no" -> fails
+#   FAKE_PURKO_READY      "ready" | "not-ready" | "absent" (default) -> purko-operator state
+#   FAKE_LLMPROVIDERS     JSON items array for llmproviders list; absent -> empty list
+#   FAKE_MCPSERVERS       JSON items array for mcpservers list; absent -> empty list
+#   FAKE_SKILLS           JSON items array for skills list; absent -> empty list
+#   FAKE_DRYRUN_OK        "yes" (default) | "no" -> apply exit code
+#   FAKE_DRYRUN_MSG       message to print on stdout for apply/dry-run (default empty)
+#   FAKE_WAIT_PHASE       phase string to return for wait_ready poll; absent -> "Unknown"
+#   FAKE_HANG             "yes" -> sleep 60 (simulate timeout) for purko-operator get
+args="$*"
+case "$args" in
+  *"config get-contexts"*)
+    printf '%s\n' "${FAKE_CONTEXTS:-}"; exit 0 ;;
+  *"get crd agents.purko.io"*"-o name"*)
+    if [ "${FAKE_HAS_CRD:-no}" = "yes" ]; then
+      echo "customresourcedefinition.apiextensions.k8s.io/agents.purko.io"; exit 0
+    fi
+    echo 'Error from server (NotFound)' >&2; exit 1 ;;
+  *"get crd agents.purko.io"*)
+    # crd_version query (jsonpath — not -o name)
+    if [ -n "${FAKE_CRD_VERSION:-}" ]; then
+      printf '%s' "$FAKE_CRD_VERSION"; exit 0
+    fi
+    echo 'Error from server (NotFound)' >&2; exit 1 ;;
+  *"get secret purko-dashboard-token"*)
+    if [ -n "${FAKE_TOKEN_B64:-}" ]; then printf '%s' "$FAKE_TOKEN_B64"; exit 0; fi
+    echo 'Error from server (NotFound)' >&2; exit 1 ;;
+  *"get --raw /readyz"*)
+    if [ "${FAKE_REACHABLE:-yes}" = "yes" ]; then printf 'ok'; exit 0; fi
+    echo 'Error: dial tcp: connect: connection refused' >&2; exit 1 ;;
+  *"get deployment purko-operator"*)
+    if [ "${FAKE_HANG:-no}" = "yes" ]; then sleep 60; fi
+    case "${FAKE_PURKO_READY:-absent}" in
+      ready)     printf '1'; exit 0 ;;
+      not-ready) printf '0'; exit 0 ;;
+      absent|*)  echo 'Error from server (NotFound): deployments.apps "purko-operator" not found' >&2; exit 1 ;;
+    esac ;;
+  *"get llmproviders"*)
+    if [ -n "${FAKE_LLMPROVIDERS:-}" ]; then
+      printf '{"items":%s}' "$FAKE_LLMPROVIDERS"; exit 0
+    fi
+    printf '{"items":[]}'; exit 0 ;;
+  *"get mcpservers"*)
+    if [ -n "${FAKE_MCPSERVERS:-}" ]; then
+      printf '{"items":%s}' "$FAKE_MCPSERVERS"; exit 0
+    fi
+    printf '{"items":[]}'; exit 0 ;;
+  *"get skills"*)
+    if [ -n "${FAKE_SKILLS:-}" ]; then
+      printf '{"items":%s}' "$FAKE_SKILLS"; exit 0
+    fi
+    printf '{"items":[]}'; exit 0 ;;
+  *"apply"*"--dry-run=server"*)
+    msg="${FAKE_DRYRUN_MSG:-}"
+    [ -n "$msg" ] && printf '%s' "$msg"
+    [ "${FAKE_DRYRUN_OK:-yes}" = "yes" ] && exit 0 || exit 1 ;;
+  *"apply"*)
+    msg="${FAKE_DRYRUN_MSG:-}"
+    [ -n "$msg" ] && printf '%s' "$msg"
+    [ "${FAKE_DRYRUN_OK:-yes}" = "yes" ] && exit 0 || exit 1 ;;
+  *"get"*"-o"*"jsonpath={.status.phase}"*)
+    phase="${FAKE_WAIT_PHASE:-Unknown}"
+    printf '%s' "$phase"; exit 0 ;;
+  *"port-forward"*)
+    # emulate kubectl output then serve nothing; die if FAKE_PF_DIE=yes
+    port=$(printf '%s' "$args" | grep -oE '[0-9]+:[0-9]+' | cut -d: -f1)
+    if [ "${FAKE_PF_DIE:-no}" = "yes" ]; then exit 1; fi
+    echo "Forwarding from 127.0.0.1:${port} -> 8082"
+    # hold the port open so wait-for-ready succeeds
+    exec python3 -c "
+import socket, time
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(('127.0.0.1', ${port})); s.listen(5)
+time.sleep(60)
+" ;;
+  *) echo "fake kubectl: unhandled: $args" >&2; exit 64 ;;
+esac

@@ -1,0 +1,43 @@
+name: Skill
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/purko/**'
+      - '.agents/skills/purko/**'
+      - 'scripts/sync-skill-mirror.sh'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.claude/skills/purko/**'
+      - '.agents/skills/purko/**'
+      - 'scripts/sync-skill-mirror.sh'
+
+jobs:
+  skill:
+    name: Skill mirror & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mirror in sync (.claude == .agents)
+        run: scripts/sync-skill-mirror.sh --check
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Python skill tests
+        working-directory: .claude/skills/purko
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest tests/ -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Webapp tests
+        working-directory: .claude/skills/purko
+        run: node --test tests-webapp/

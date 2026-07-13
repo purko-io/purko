@@ -1,0 +1,9 @@
+{
+  "name": "Purko Mission Control",
+  "short_name": "Purko",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#0f8f86",
+  "icons": [{ "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

@@ -1,0 +1,59 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: client-analytics
+  namespace: ai-agents
+spec:
+  description: "Data quality check → anomaly detection → analysis → report generation → strategic insights"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    clientName: "RetailMax"
+    dataSource: "E-commerce transaction data, Q1 2026"
+    metrics: "revenue, conversion rate, cart abandonment, customer acquisition cost, lifetime value"
+    reportPeriod: "Q1 2026 vs Q4 2025"
+  steps:
+    - name: check-data-quality
+      agentRef:
+        name: data-quality-analyst
+      input:
+        raw: |
+          Run data quality assessment for ${parameters.clientName}.
+          Data source: ${parameters.dataSource}
+          Key metrics: ${parameters.metrics}
+          Produce a quality scorecard.
+
+    - name: detect-anomalies
+      agentRef:
+        name: anomaly-detector
+      dependsOn: [check-data-quality]
+      input:
+        raw: |
+          Scan for anomalies in ${parameters.clientName} data.
+          Period: ${parameters.reportPeriod}
+          Metrics: ${parameters.metrics}
+          Data quality context: ${steps.check-data-quality.output}
+          Flag any unusual patterns with severity and possible causes.
+
+    - name: generate-report
+      agentRef:
+        name: report-generator
+      dependsOn: [check-data-quality, detect-anomalies]
+      input:
+        raw: |
+          Generate client analytics report for ${parameters.clientName}.
+          Period: ${parameters.reportPeriod}
+          Metrics: ${parameters.metrics}
+          Data quality: ${steps.check-data-quality.output}
+          Anomalies: ${steps.detect-anomalies.output}
+
+    - name: synthesize-insights
+      agentRef:
+        name: insight-synthesizer
+      dependsOn: [generate-report]
+      input:
+        raw: |
+          Synthesize strategic insights for ${parameters.clientName} from:
+          Report: ${steps.generate-report.output}
+          Anomalies: ${steps.detect-anomalies.output}
+          Produce top 3 recommendations ranked by expected business impact.

@@ -181,6 +181,22 @@ kubectl apply -f examples/agents/starter/
 kubectl apply -f examples/workflows/starter/
 ```
 
+## Mission Control (Claude Code skill)
+
+Watch and manage your agent teams from [Claude Code](https://claude.com/claude-code)
+with the bundled **Purko skill**. Say `/purko` and it opens a live Mission
+Control webapp over your cluster — real-time workflows and agents, human-gate
+approvals, guided agent/workflow authoring, and a link to the full dashboard.
+
+Install or update (Python 3 required; stdlib-only, no `pip` installs):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/purko-io/purko/main/scripts/install-skill.sh | sh
+```
+
+Then run `/purko` in any Claude Code session. See
+[`.claude/skills/purko/README.md`](.claude/skills/purko/README.md) for details.
+
 ## Documentation
 
 Full documentation: [purko-io.github.io/purko](https://purko-io.github.io/purko/)

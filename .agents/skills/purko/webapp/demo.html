@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purko — Demo Studio · Proposal O v3 (Atelier demo mode)</title>
+<style>
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-600.woff2') format('woff2'); font-weight: 500 600; font-style: normal; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-500.woff2') format('woff2'); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-600.woff2') format('woff2'); font-weight: 600; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-500.woff2') format('woff2'); font-weight: 500; }
+</style>
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     PROPOSAL O v3 — Atelier demo mode
+     What an unprovisioned visitor sees inside "the demo studio":
+     the same Atelier Mission Control, wrapped in demo chrome —
+     studio switcher (one per showcase industry, defaulted from
+     the visitor's email domain), a replay of a REAL recorded run
+     (time-compressed, streamed through the same SSE pipeline),
+     and one interactive approval gate. Press Approve: the run
+     continues, then the conversion toast appears.
+     Content = the legal-compliance showcase (contract-analyst,
+     regulatory-monitor, due-diligence-researcher,
+     compliance-reporter; contract-review workflow).
+     Demo data · simulated · placeholder pricing elsewhere.
+     ═══════════════════════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper:     #f7f3ec;
+    --paper-2:   #fffdf8;
+    --line:      #e2d9c8;
+    --line-ink:  #1c1917;
+    --ink:       #1c1917;
+    --ink-2:     #57534e;
+    --ink-3:     #9c948a;
+    --terra:     #0f8f86;   /* Purko brand teal — Paper-theme --accent */
+    --terra-bg:  #e1edea;
+    --ok:        #2e7d4f;
+    --ok-bg:     #e2eee6;
+    --warn:      #b07d10;
+    --warn-bg:   #f4ead2;
+    --run:       #2c5faa;
+    --run-bg:    #e0e8f4;
+    --serif: 'Fraunces', serif;
+    --sans: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 36px 90px; }
+
+  /* ── demo banner ────────────────────────────────────────── */
+  .demo-banner {
+    background: var(--ink); color: var(--paper);
+    font-size: 12.5px; padding: 9px 36px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .demo-banner .tag {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--terra); border-radius: 999px; padding: 3px 10px; color: #fff;
+  }
+  .demo-banner em { font-style: italic; font-family: var(--serif); }
+  .demo-banner .right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .demo-banner button {
+    font-family: var(--sans); font-size: 11.5px; font-weight: 600;
+    background: var(--paper); color: var(--ink); border: none; border-radius: 999px;
+    padding: 5px 13px; cursor: pointer;
+  }
+  .demo-banner .reset { font-family: var(--mono); font-size: 10px; color: rgba(247,243,236,0.55); }
+
+  /* ── masthead + studio tabs ─────────────────────────────── */
+  .masthead {
+    display: flex; align-items: baseline; gap: 20px;
+    padding: 24px 0 16px; border-bottom: 2px solid var(--line-ink);
+  }
+  .masthead .brand { font-family: var(--serif); font-weight: 600; font-size: 22px; letter-spacing: -0.3px; }
+  .masthead .brand em { font-style: italic; font-weight: 400; color: var(--terra); }
+  .masthead .right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .replay {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--run);
+  }
+  .replay i { width: 7px; height: 7px; border-radius: 50%; background: var(--run); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  .clock { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .who { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+  .who i {
+    width: 26px; height: 26px; border-radius: 50%; font-style: normal;
+    background: var(--ink); color: var(--paper);
+    display: grid; place-items: center; font-size: 11px; font-weight: 600;
+  }
+
+  .studios { display: flex; gap: 6px; padding: 16px 0 0; flex-wrap: wrap; }
+  .studio {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500;
+    color: var(--ink-2); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 16px; cursor: pointer; transition: all .15s;
+    position: relative;
+  }
+  .studio:hover { border-color: var(--ink-3); }
+  .studio.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .studio .for-you {
+    position: absolute; top: -8px; right: 10px;
+    font-family: var(--mono); font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+    background: var(--terra); color: #fff; border-radius: 999px; padding: 2px 7px;
+  }
+
+  /* ── headline ───────────────────────────────────────────── */
+  .headline {
+    font-family: var(--serif); font-weight: 400; font-size: 30px;
+    line-height: 1.25; letter-spacing: -0.4px;
+    padding: 28px 0 6px; max-width: 860px;
+  }
+  .headline b { font-weight: 600; }
+  .subline { color: var(--ink-3); font-size: 13.5px; margin-bottom: 30px; }
+  .subline b { color: var(--ink-2); font-weight: 500; }
+  .subline .rec { font-family: var(--mono); font-size: 11px; }
+
+  /* ── gate letter ────────────────────────────────────────── */
+  .gate {
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: 4px; padding: 24px 28px; margin-bottom: 40px;
+    position: relative; display: flex; gap: 24px; align-items: center;
+    box-shadow: 0 1px 0 var(--line), 0 12px 32px rgba(28,25,23,0.05);
+  }
+  .gate::before {
+    content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px; background: var(--warn); border-radius: 2px;
+  }
+  .gate.approved::before { background: var(--ok); }
+  .gate-body { flex: 1; min-width: 0; }
+  .gate-kicker {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--warn); margin-bottom: 9px;
+  }
+  .gate.approved .gate-kicker { color: var(--ok); }
+  .gate-q { font-family: var(--serif); font-size: 21px; font-weight: 500; letter-spacing: -0.2px; line-height: 1.35; }
+  .gate-meta { margin-top: 9px; font-size: 13px; color: var(--ink-3); }
+  .gate-meta b { color: var(--ink-2); font-weight: 500; }
+  .gate-actions { display: flex; gap: 10px; flex: 0 0 auto; align-items: center; }
+  .btn {
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    border-radius: 999px; padding: 11px 24px; cursor: pointer;
+    border: 1px solid var(--ink); transition: all .15s;
+  }
+  .btn.approve { background: var(--ink); color: var(--paper); }
+  .btn.approve:hover { background: #000; box-shadow: 0 4px 14px rgba(28,25,23,0.25); }
+  .btn.deny { background: transparent; color: var(--ink); }
+  .btn.deny:hover { background: #f5e0dd; border-color: #c0392b; color: #c0392b; }
+
+  /* the "try it" nudge */
+  .nudge {
+    position: absolute; top: -13px; right: 26px;
+    font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--terra);
+    background: var(--paper); border: 1px solid var(--terra); border-radius: 999px;
+    padding: 4px 15px; animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob { 50% { transform: translateY(-3px); } }
+
+  /* ── sections ───────────────────────────────────────────── */
+  .cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 52px; align-items: start; }
+  @media (max-width: 1024px) { .cols { grid-template-columns: 1fr; gap: 24px; } }
+  h2 {
+    font-family: var(--serif); font-weight: 600; font-size: 17px; letter-spacing: -0.2px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line-ink);
+  }
+  h2 small { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-weight: 400; }
+  section { margin-bottom: 42px; }
+
+  .st {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.5px;
+    border-radius: 999px; padding: 4px 11px;
+  }
+  .st i { font-style: normal; }
+  .st.running { color: var(--run); background: var(--run-bg); }
+  .st.running i { display: inline-block; animation: spin 2.5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .st.ok      { color: var(--ok); background: var(--ok-bg); }
+  .st.waiting { color: var(--warn); background: var(--warn-bg); }
+  .st.idle    { color: var(--ink-3); background: #ede7db; }
+
+  /* ── workflow timeline ──────────────────────────────────── */
+  .wf { padding: 20px 0 22px; border-bottom: 1px solid var(--line); }
+  .wf:last-child { border-bottom: none; }
+  .wf-head { display: flex; align-items: baseline; gap: 14px; }
+  .wf-name { font-family: var(--serif); font-size: 19px; font-weight: 500; letter-spacing: -0.2px; }
+  .wf-ns { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .wf-head .st { margin-left: auto; }
+
+  .tl { display: flex; margin-top: 18px; }
+  .tl-step { flex: 1; position: relative; padding-top: 16px; }
+  .tl-step::before {
+    content: ''; position: absolute; top: 5px; left: 0; right: 0; height: 2px;
+    background: var(--line);
+  }
+  .tl-step::after {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--ink-3);
+  }
+  .tl-step.done::before { background: var(--ok); }
+  .tl-step.done::after { background: var(--ok); border-color: var(--ok); }
+  .tl-step.active::after { background: var(--paper); border-color: var(--run); box-shadow: 0 0 0 4px var(--run-bg); animation: pulse 1.6s ease-in-out infinite; }
+  .tl-step.gated::after { background: var(--warn); border-color: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); animation: pulse 1.6s ease-in-out infinite; }
+  .tl-name { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+  .tl-sub { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .tl-step.done .tl-name { color: var(--ink-3); }
+  .tl-step.gated .tl-name, .tl-step.active .tl-name { color: var(--ink); }
+  /* parallel pair: two stacked labels on one column */
+  .tl-step.parallel .tl-name + .tl-sub { margin-bottom: 6px; }
+  .tl-step .par-tag {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--run); background: var(--run-bg); border-radius: 999px; padding: 1px 7px;
+    display: inline-block; margin-bottom: 5px;
+  }
+
+  .wf-foot { display: flex; gap: 18px; margin-top: 16px; font-size: 12.5px; color: var(--ink-3); align-items: center; }
+  .wf-foot b { color: var(--ink-2); font-weight: 500; }
+  .wf-foot .mono { font-family: var(--mono); font-size: 11px; margin-left: auto; }
+
+  /* params card — "this was a real run" */
+  .run-params {
+    background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 18px; margin-top: 18px;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-2); line-height: 1.9;
+  }
+  .run-params b { color: var(--ink); font-weight: 500; }
+  .run-params .k { color: var(--ink-3); display: inline-block; width: 110px; }
+
+  /* ── agents ─────────────────────────────────────────────── */
+  .agent {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 2px; border-bottom: 1px solid var(--line);
+  }
+  .agent:last-child { border-bottom: none; }
+  .agent-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+    display: grid; place-items: center;
+    font-family: var(--serif); font-weight: 600; font-size: 16px;
+    background: var(--paper-2); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .agent.working .agent-avatar { border: 2px solid var(--run); color: var(--run); }
+  .agent-main { flex: 1; min-width: 0; }
+  .agent-name { font-family: var(--serif); font-size: 15px; font-weight: 500; }
+  .agent-name small { font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); font-weight: 400; margin-left: 8px; }
+  .agent-task { font-size: 12px; color: var(--ink-2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-side { text-align: right; flex: 0 0 auto; }
+  .agent-model { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 5px; }
+
+  /* ── ledger ─────────────────────────────────────────────── */
+  .ledger-note {
+    font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--terra);
+    margin: 6px 0 4px;
+  }
+  .feed { max-height: 380px; overflow: hidden; position: relative; }
+  .feed::after { content:''; position:absolute; left:0; right:0; bottom:0; height:60px;
+    background: linear-gradient(transparent, var(--paper)); pointer-events:none; }
+  .ev {
+    display: grid; grid-template-columns: 52px 18px 1fr; gap: 12px; align-items: baseline;
+    padding: 9px 2px; border-bottom: 1px dotted var(--line); font-size: 13px;
+  }
+  .ev.new { animation: evIn .45s ease-out; }
+  @keyframes evIn { from { opacity: 0; transform: translateY(-5px); } }
+  .ev-t { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+  .ev-i { font-size: 11px; text-align: center; font-style: normal; }
+  .ev-i.running { color: var(--run); } .ev-i.ok { color: var(--ok); }
+  .ev-i.waiting { color: var(--warn); } .ev-i.failed { color: #c0392b; }
+  .ev-m { color: var(--ink-2); line-height: 1.5; }
+  .ev-m b { color: var(--ink); font-weight: 500; }
+
+  /* ── conversion toast (appears after approve) ───────────── */
+  .toast {
+    position: fixed; bottom: 46px; left: 50%; transform: translate(-50%, 20px);
+    width: 620px; max-width: 92vw; z-index: 900; opacity: 0; pointer-events: none;
+    background: var(--ink); color: var(--paper); border-radius: 12px;
+    padding: 20px 24px; display: flex; gap: 18px; align-items: center;
+    box-shadow: 0 24px 60px rgba(28,25,23,0.35);
+    transition: opacity .4s, transform .4s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .toast .big { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+  .toast .big em { font-style: italic; color: #7fd4c9; }
+  .toast .sub { font-size: 12px; color: rgba(247,243,236,0.65); margin-top: 4px; }
+  .toast .btn { background: var(--terra); border-color: var(--terra); color: #fff; flex: 0 0 auto; }
+
+  .prop-tag {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
+    text-align: center; padding: 7px; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 1.5px; color: var(--ink-3);
+    background: rgba(247,243,236,0.92); border-top: 1px solid var(--line);
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <span class="tag">Demo studio</span>
+  <span>You're watching a <em>replay of a real run</em>, streamed through the live pipeline · read-only, except one thing we left for you…</span>
+  <div class="right">
+    <span class="reset">resets in 41:12</span>
+    <button data-action="start-studio">Start your own studio</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <span class="brand">Purko <em>Mission Control</em></span>
+    <div class="right">
+      <span class="replay"><i></i>REPLAY ×5</span>
+      <span class="clock" id="clock">14:07:32</span>
+      <span class="who"><i>M</i>maya · guest</span>
+    </div>
+  </div>
+
+  <div class="studios" id="studios"></div>
+
+  <div class="headline" id="headline"></div>
+  <div class="subline" id="subline"></div>
+
+  <!-- THE INTERACTIVE GATE -->
+  <div class="gate" id="gate">
+    <div class="nudge" id="nudge">this button is real — try it</div>
+    <div class="gate-body">
+      <div class="gate-kicker" id="gate-kicker"></div>
+      <div class="gate-q" id="gate-q"></div>
+      <div class="gate-meta" id="gate-meta"></div>
+    </div>
+    <div class="gate-actions" id="gate-actions">
+      <button class="btn approve" onclick="approveGate()">Approve</button>
+      <button class="btn deny" onclick="approveGate(true)">Decline</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <section>
+        <h2>Workflows <small>1 replaying · the studio's daily driver</small></h2>
+        <div class="wf">
+          <div class="wf-head">
+            <span class="wf-name" id="wf-name"></span>
+            <span class="wf-ns" id="wf-run"></span>
+            <span class="st waiting" id="wf-status"><i>&#9208;</i> gate at the review step</span>
+          </div>
+          <div class="tl" id="wf-timeline"></div>
+          <div class="wf-foot"><span id="wf-foot"></span><span class="mono">replay elapsed <span id="wf-el">01:12</span> of 01:33</span></div>
+          <div class="run-params" id="wf-params"></div>
+        </div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>Agents <small>the studio's AI team</small></h2>
+        <div id="agents"></div>
+      </section>
+      <section>
+        <h2>Ledger <small>from the execution log</small></h2>
+        <div class="ledger-note">every tool call was logged in the real run &mdash; this is the audit trail</div>
+        <div class="feed" id="feed"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERSION TOAST -->
+<div class="toast" id="toast">
+  <div style="flex:1">
+    <div class="big">That approval was <em>yours</em>.</div>
+    <div class="sub" id="toast-sub"></div>
+  </div>
+  <button class="btn" data-action="start-studio">Start your own studio &rarr;</button>
+</div>
+
+<div class="prop-tag">Proposal O&middot;v3 &middot; Atelier demo mode &mdash; replay + interactive gate &middot; demo data</div>
+
+<script>
+  // ── Showcase data — one entry per industry, drawn from the purko-oss
+  //    docs (docs/showcases/*.md): real agents, workflows, and human gates.
+  const STUDIOS = {
+    'legal-compliance': {
+      label: 'Legal &amp; Compliance', forYou: true,
+      headline: 'A law firm\'s AI team, reviewing a <b>vendor contract</b> &mdash; recorded Tuesday, replayed for you at 5&times; speed.',
+      subline: '4 agents &middot; 1 workflow &middot; <span class="rec">recorded 2026-07-08 14:02 UTC</span> &middot; original run 7m 41s, <b>$0.21</b> &middot; every event below came from the real execution log',
+      wf: 'contract-review', run: 'run #118 &middot; GlobalTech Inc &middot; SaaS vendor agreement',
+      foot: 'with <b>4 agents</b> &middot; triggered by webhook from the intake system',
+      steps: [
+        {name:'analyze-contract', agent:'contract-analyst', dur:'94s'},
+        {parallel:[{name:'check-regulatory', agent:'regulatory-monitor', dur:'71s'}, {name:'research-counterparty', agent:'due-diligence', dur:'88s'}]},
+        {name:'compile-report', agent:'compliance-reporter', dur:'62s'},
+        {gate:'approve-findings'},
+        {queued:'file-report'},
+      ],
+      params: [
+        ['counterparty','<b>GlobalTech Inc</b> &middot; Delaware C-corp &middot; no sanctions hits &middot; 2 open litigations (dismissed, settled)'],
+        ['flagged','auto-renewal clause &sect;7.2 &middot; missing DE &sect;18-305 disclosure &middot; liability cap OK'],
+        ['audit trail','input doc &rarr; agent reasoning &rarr; 11 tool calls &rarr; report &rarr; <b>your approval, timestamped</b>'],
+      ],
+      agents: [
+        {i:'C', name:'contract-analyst', sub:'clause &amp; risk review', task:'Parsed 42 clauses &middot; flagged &sect;7.2 auto-renewal'},
+        {i:'R', name:'regulatory-monitor', sub:'jurisdiction watch', task:'DE law check &middot; found &sect;18-305 disclosure gap'},
+        {i:'D', name:'due-diligence-researcher', sub:'counterparty research', task:'Registries, litigation &amp; sanctions &mdash; clean'},
+        {i:'P', name:'compliance-reporter', sub:'report assembly', task:'Report compiled &mdash; waiting on your approval', gate:true},
+      ],
+      ledger: [
+        ['+01:10','waiting','&#9208;','<b>approve-findings</b> paused &mdash; human gate'],
+        ['+01:04','ok','&#10003;','<b>compile-report</b> succeeded &middot; 3-page brief'],
+        ['+00:58','running','&#9878;','<b>compliance-reporter</b> tool call docs.render "globaltech-brief"'],
+        ['+00:49','ok','&#10003;','<b>research-counterparty</b> clean: no sanctions, 2 closed suits'],
+        ['+00:41','running','&#9878;','<b>due-diligence</b> tool call sanctions.check "GlobalTech Inc"'],
+        ['+00:22','ok','&#10003;','<b>analyze-contract</b> succeeded &middot; 42 clauses, 2 cautions'],
+        ['+00:03','running','&#9680;','<b>contract-review</b> triggered by webhook &middot; intake system'],
+      ],
+      gate: {q:'File the compliance report to the GlobalTech client record?', meta:'workflow <b>contract-review</b> &middot; step 4 of 5, <b>approve-findings</b> &middot; 2 cautions flagged: auto-renewal clause, DE &sect;18-305 disclosure'},
+      approve: {tool:'clientrecord.file "globaltech-brief"', working:'Filing report to client record&hellip;', done:'Report filed to GlobalTech client record', final:'<b>contract-review</b> run #118 succeeded &middot; $0.21', filed:'&#10003; filed &middot; 8s'},
+      toast: 'contract-review finished &middot; 4 agents &middot; $0.21 &middot; full audit trail, ending with your timestamped decision. Imagine it on your firm\'s contracts.',
+    },
+
+    'digital-agency': {
+      label: 'Digital Agency',
+      headline: 'A marketing agency\'s AI team, shipping a <b>product-launch campaign</b> &mdash; recorded run, replayed for you at 5&times; speed.',
+      subline: '4 agents &middot; 1 workflow &middot; <span class="rec">recorded 2026-07-07 10:19 UTC</span> &middot; original run 5m 55s, <b>$0.31</b> &middot; three content pieces written in parallel',
+      wf: 'campaign-delivery', run: 'run #204 &middot; Northwind SaaS &middot; Q3 product launch',
+      foot: 'with <b>4 agents</b> &middot; social, email &amp; blog written in one parallel pass',
+      steps: [
+        {name:'create-strategy', agent:'campaign-strategist', dur:'48s'},
+        {parallel:[{name:'write-social', agent:'content-writer', dur:'39s'}, {name:'write-email', agent:'content-writer', dur:'44s'}, {name:'write-blog', agent:'content-writer', dur:'61s'}]},
+        {name:'review-content', agent:'brand-reviewer', dur:'33s'},
+        {gate:'approve-content'},
+        {queued:'package-deliverables'},
+      ],
+      params: [
+        ['audience','<b>3 personas</b> &middot; SMB ops leads, RevOps managers, founders &middot; LinkedIn + email primary'],
+        ['flagged','1 brand caution: "revolutionary" on the forbidden-words list &middot; tone otherwise on-voice'],
+        ['audit trail','brief &rarr; strategy &rarr; 3 parallel drafts &rarr; brand review &rarr; <b>your approval, timestamped</b>'],
+      ],
+      agents: [
+        {i:'S', name:'campaign-strategist', sub:'strategy &amp; planning', task:'3 personas, channel plan &amp; KPIs set'},
+        {i:'W', name:'content-writer', sub:'social &middot; email &middot; blog', task:'3 pieces written in parallel &middot; 1 tone flag'},
+        {i:'B', name:'brand-reviewer', sub:'brand compliance', task:'Flagged "revolutionary" &mdash; forbidden word'},
+        {i:'R', name:'campaign-reporter', sub:'performance reporting', task:'Standing by for the weekly report', gate:true},
+      ],
+      ledger: [
+        ['+01:10','waiting','&#9208;','<b>approve-content</b> paused &mdash; human gate'],
+        ['+01:02','ok','&#10003;','<b>review-content</b> done &middot; 1 caution flagged'],
+        ['+00:55','running','&#9878;','<b>brand-reviewer</b> tool call brand.check "launch-copy"'],
+        ['+00:47','ok','&#10003;','<b>write-blog</b> done &middot; 900-word SEO post'],
+        ['+00:39','ok','&#10003;','<b>write-email</b> done &middot; 4-touch nurture sequence'],
+        ['+00:31','ok','&#10003;','<b>write-social</b> done &middot; 6 LinkedIn posts'],
+        ['+00:14','ok','&#10003;','<b>create-strategy</b> done &middot; 3 personas, KPIs'],
+        ['+00:03','running','&#9680;','<b>campaign-delivery</b> triggered &middot; client brief'],
+      ],
+      gate: {q:'Approve this campaign copy for client delivery?', meta:'workflow <b>campaign-delivery</b> &middot; step 4 of 5, <b>approve-content</b> &middot; 1 brand caution: forbidden word "revolutionary"'},
+      approve: {tool:'deliverables.package "northwind-launch"', working:'Packaging deliverables by channel&hellip;', done:'Campaign package delivered to Northwind', final:'<b>campaign-delivery</b> run #204 succeeded &middot; $0.31', filed:'&#10003; packaged &middot; 6s'},
+      toast: 'campaign-delivery finished &middot; 4 agents &middot; $0.31 &middot; social, email &amp; blog, brand-checked and gated on your call. Imagine it on your client roster.',
+    },
+
+    'real-estate': {
+      label: 'Real Estate',
+      headline: 'A brokerage\'s AI team, turning a <b>new listing</b> into a full package &mdash; recorded run, replayed at 5&times; speed.',
+      subline: '4 agents &middot; 1 workflow &middot; <span class="rec">recorded 2026-07-06 16:41 UTC</span> &middot; original run 4m 12s, <b>$0.18</b> &middot; listing, pricing, buyers &amp; paperwork in one pass',
+      wf: 'listing-to-close', run: 'run #77 &middot; 412 Maple Ave &middot; 4bd/3ba single-family',
+      foot: 'with <b>4 agents</b> &middot; listing &amp; buyer-match run in parallel off the market analysis',
+      steps: [
+        {name:'market-analysis', agent:'market-analyst', dur:'52s'},
+        {parallel:[{name:'create-listing', agent:'listing-writer', dur:'46s'}, {name:'match-buyers', agent:'client-matcher', dur:'37s'}]},
+        {gate:'approve-listing'},
+        {queued:'prepare-transaction'},
+      ],
+      params: [
+        ['pricing','<b>3 ranges</b> &middot; aggressive $685k / market $649k / conservative $625k &middot; 14 comps'],
+        ['buyers','<b>9 matched</b> from the database &middot; top fit 0.92 &middot; 3 pre-approved cash buyers'],
+        ['audit trail','property details &rarr; comps &rarr; listing + buyer match &rarr; <b>your approval, timestamped</b>'],
+      ],
+      agents: [
+        {i:'M', name:'market-analyst', sub:'comps &amp; pricing', task:'14 comps &middot; 3 price ranges recommended'},
+        {i:'L', name:'listing-writer', sub:'MLS &amp; marketing copy', task:'MLS description, headline &amp; social drafted'},
+        {i:'C', name:'client-matcher', sub:'buyer matching', task:'9 buyers matched &middot; top fit 0.92'},
+        {i:'T', name:'transaction-coordinator', sub:'closing &amp; docs', task:'Checklist queued &mdash; waiting on your approval', gate:true},
+      ],
+      ledger: [
+        ['+01:10','waiting','&#9208;','<b>approve-listing</b> paused &mdash; human gate'],
+        ['+01:00','ok','&#10003;','<b>match-buyers</b> done &middot; 9 buyers, top fit 0.92'],
+        ['+00:52','ok','&#10003;','<b>create-listing</b> done &middot; MLS + 3 social'],
+        ['+00:44','running','&#9878;','<b>listing-writer</b> tool call mls.format "412-maple"'],
+        ['+00:33','running','&#9878;','<b>market-analyst</b> tool call comps.pull "412 Maple Ave"'],
+        ['+00:18','ok','&#10003;','<b>market-analysis</b> done &middot; 14 comps, 3 ranges'],
+        ['+00:03','running','&#9680;','<b>listing-to-close</b> triggered &middot; new listing intake'],
+      ],
+      gate: {q:'Approve this listing copy and pricing to publish?', meta:'workflow <b>listing-to-close</b> &middot; step 3 of 4, <b>approve-listing</b> &middot; market price $649k, aggressive $685k'},
+      approve: {tool:'transaction.prepare "412-maple"', working:'Building the closing checklist &amp; timeline&hellip;', done:'Transaction package ready for 412 Maple Ave', final:'<b>listing-to-close</b> run #77 succeeded &middot; $0.18', filed:'&#10003; prepared &middot; 5s'},
+      toast: 'listing-to-close finished &middot; 4 agents &middot; $0.18 &middot; pricing, listing, buyer matches &amp; paperwork, gated on your sign-off. Imagine it on every new listing.',
+    },
+
+    'data-analytics': {
+      label: 'Data Analytics',
+      headline: 'An analytics team\'s AI pipeline, turning a <b>raw client dataset</b> into insights &mdash; recorded run, replayed at 5&times; speed.',
+      subline: '4 agents &middot; 1 workflow &middot; <span class="rec">recorded 2026-07-05 09:08 UTC</span> &middot; original run 6m 30s, <b>$0.27</b> &middot; quality-gated before a single number is analyzed',
+      wf: 'client-analytics', run: 'run #331 &middot; Acme Retail &middot; Q2 sales &amp; funnel data',
+      foot: 'with <b>4 agents</b> &middot; a data-quality gate guards everything downstream',
+      steps: [
+        {name:'check-data-quality', agent:'data-quality-analyst', dur:'41s'},
+        {name:'detect-anomalies', agent:'anomaly-detector', dur:'58s'},
+        {name:'generate-report', agent:'report-generator', dur:'66s'},
+        {gate:'approve-report'},
+        {queued:'synthesize-insights'},
+      ],
+      params: [
+        ['data quality','<b>completeness 98.2%</b> &middot; 1 timeliness gap (EOD feed late) &middot; passed the gate'],
+        ['anomalies','<b>3 flagged</b> &middot; checkout drop-off spike, one channel &middot; 2 benign seasonal'],
+        ['audit trail','quality gate &rarr; anomaly scan &rarr; report &rarr; <b>your approval, timestamped</b>'],
+      ],
+      agents: [
+        {i:'Q', name:'data-quality-analyst', sub:'pipeline health', task:'5 checks &middot; 98.2% complete, 1 timeliness gap'},
+        {i:'A', name:'anomaly-detector', sub:'outlier detection', task:'3 anomalies &middot; checkout drop-off spike'},
+        {i:'G', name:'report-generator', sub:'client reporting', task:'Report compiled &mdash; waiting on your approval', gate:true},
+        {i:'I', name:'insight-synthesizer', sub:'business recommendations', task:'Standing by to rank recommendations'},
+      ],
+      ledger: [
+        ['+01:10','waiting','&#9208;','<b>approve-report</b> paused &mdash; human gate'],
+        ['+01:01','ok','&#10003;','<b>generate-report</b> done &middot; exec dashboard + deep dives'],
+        ['+00:53','running','&#9878;','<b>report-generator</b> tool call charts.render "q2-funnel"'],
+        ['+00:42','ok','&#10003;','<b>detect-anomalies</b> done &middot; 3 flagged, 2 benign'],
+        ['+00:30','running','&#9878;','<b>anomaly-detector</b> tool call stats.scan "checkout-funnel"'],
+        ['+00:16','ok','&#10003;','<b>check-data-quality</b> passed &middot; 98.2% complete'],
+        ['+00:03','running','&#9680;','<b>client-analytics</b> triggered &middot; dataset upload'],
+      ],
+      gate: {q:'Approve this analytics report for the client?', meta:'workflow <b>client-analytics</b> &middot; step 4 of 5, <b>approve-report</b> &middot; 3 anomalies flagged, data quality passed'},
+      approve: {tool:'insights.rank "acme-q2"', working:'Ranking recommendations by business impact&hellip;', done:'Insights delivered &middot; 3 ranked recommendations', final:'<b>client-analytics</b> run #331 succeeded &middot; $0.27', filed:'&#10003; synthesized &middot; 7s'},
+      toast: 'client-analytics finished &middot; 4 agents &middot; $0.27 &middot; quality-gated, anomaly-scanned, and held for your review before it left the firm. Imagine it on every client dataset.',
+    },
+
+    'video-production': {
+      label: 'Video Production',
+      headline: 'A video studio\'s AI team, prepping a <b>brand video shoot</b> &mdash; recorded run, replayed for you at 5&times; speed.',
+      subline: '4 agents &middot; 1 workflow &middot; <span class="rec">recorded 2026-07-04 13:27 UTC</span> &middot; original run 5m 08s, <b>$0.34</b> &middot; script, shots &amp; distribution in one pre-pro pass',
+      wf: 'video-production', run: 'run #59 &middot; Lumen Fitness &middot; 60s brand spot',
+      foot: 'with <b>4 agents</b> &middot; shot plan &amp; distribution branch in parallel off the script',
+      steps: [
+        {name:'write-script', agent:'script-writer', dur:'57s'},
+        {parallel:[{name:'plan-shots', agent:'shot-planner', dur:'49s'}, {name:'distribution-plan', agent:'distribution-strategist', dur:'38s'}]},
+        {gate:'approve-script'},
+        {queued:'post-production-brief'},
+      ],
+      params: [
+        ['script','<b>HOOK / SETUP / BODY / CTA</b> &middot; 60s &middot; visual + voiceover + timing per beat'],
+        ['distribution','<b>4 cuts</b> &middot; 16:9 YouTube, 9:16 Reels/TikTok, 1:1 LinkedIn &middot; SEO metadata set'],
+        ['audit trail','brief &rarr; script &rarr; shot plan + distribution &rarr; <b>director approval, timestamped</b>'],
+      ],
+      agents: [
+        {i:'S', name:'script-writer', sub:'shooting script', task:'HOOK/SETUP/BODY/CTA &middot; 60s written'},
+        {i:'H', name:'shot-planner', sub:'shot list &amp; storyboard', task:'Shot list, equipment &amp; locations set'},
+        {i:'D', name:'distribution-strategist', sub:'platform strategy', task:'4 platform cuts &amp; SEO metadata planned'},
+        {i:'P', name:'post-production-coordinator', sub:'editing brief', task:'Editing brief queued &mdash; waiting on approval', gate:true},
+      ],
+      ledger: [
+        ['+01:10','waiting','&#9208;','<b>approve-script</b> paused &mdash; director gate'],
+        ['+01:00','ok','&#10003;','<b>distribution-plan</b> done &middot; 4 platform cuts'],
+        ['+00:52','ok','&#10003;','<b>plan-shots</b> done &middot; shot list + storyboard'],
+        ['+00:43','running','&#9878;','<b>shot-planner</b> tool call storyboard.render "lumen-spot"'],
+        ['+00:31','running','&#9878;','<b>script-writer</b> tool call script.format "lumen-60s"'],
+        ['+00:16','ok','&#10003;','<b>write-script</b> done &middot; HOOK/SETUP/BODY/CTA'],
+        ['+00:03','running','&#9680;','<b>video-production</b> triggered &middot; creative brief'],
+      ],
+      gate: {q:'Approve this shooting script before the shoot?', meta:'workflow <b>video-production</b> &middot; step 3 of 4, <b>approve-script</b> &middot; 60s spot, 4 platform cuts planned'},
+      approve: {tool:'brief.compile "lumen-editing"', working:'Compiling the editing brief &amp; export specs&hellip;', done:'Editing brief ready &middot; 4 platform export specs', final:'<b>video-production</b> run #59 succeeded &middot; $0.34', filed:'&#10003; briefed &middot; 6s'},
+      toast: 'video-production finished &middot; 4 agents &middot; $0.34 &middot; script, shots &amp; distribution, held for your director sign-off before the shoot. Imagine it on every production.',
+    },
+  };
+
+  const ORDER = ['legal-compliance','digital-agency','real-estate','data-analytics','video-production'];
+  let active = 'legal-compliance';
+  const pad = n => String(n).padStart(2, '0');
+
+  function renderTimeline(steps) {
+    return steps.map(st => {
+      if (st.parallel) {
+        const rows = st.parallel.map(x => `<div class="tl-name">${x.name}</div><div class="tl-sub">&#10003; ${x.agent} &middot; ${x.dur}</div>`).join('');
+        return `<div class="tl-step done parallel"><span class="par-tag">&#8741; parallel</span>${rows}</div>`;
+      }
+      if (st.gate) return `<div class="tl-step gated" id="tl-gate"><div class="tl-name">${st.gate}</div><div class="tl-sub" id="tl-gate-sub">&#9208; waiting on you</div></div>`;
+      if (st.queued) return `<div class="tl-step" id="tl-file"><div class="tl-name">${st.queued}</div><div class="tl-sub" id="tl-file-sub">queued</div></div>`;
+      return `<div class="tl-step done"><div class="tl-name">${st.name}</div><div class="tl-sub">&#10003; ${st.agent} &middot; ${st.dur}</div></div>`;
+    }).join('');
+  }
+
+  function renderStudio(key) {
+    active = key;
+    const d = STUDIOS[key];
+    document.getElementById('studios').innerHTML = ORDER.map(k => {
+      const s = STUDIOS[k];
+      const fy = s.forYou ? '<span class="for-you">for you</span>' : '';
+      return `<button class="studio${k===key?' active':''}" data-studio="${k}">${s.label}${fy}</button>`;
+    }).join('');
+    document.getElementById('headline').innerHTML = d.headline;
+    document.getElementById('subline').innerHTML = d.subline;
+    document.getElementById('wf-name').textContent = d.wf;
+    document.getElementById('wf-run').innerHTML = d.run;
+    document.getElementById('wf-foot').innerHTML = d.foot;
+    document.getElementById('wf-timeline').innerHTML = renderTimeline(d.steps);
+    document.getElementById('wf-params').innerHTML = d.params.map(([k,v]) => `<div><span class="k">${k}</span>${v}</div>`).join('');
+    document.getElementById('agents').innerHTML = d.agents.map(a => `
+      <div class="agent"${a.gate?' id="reporter-row"':''}>
+        <div class="agent-avatar">${a.i}</div>
+        <div class="agent-main">
+          <div class="agent-name">${a.name}<small>${a.sub}</small></div>
+          <div class="agent-task"${a.gate?' id="reporter-task"':''}>${a.task}</div>
+        </div>
+        <div class="agent-side"><span class="st ${a.gate?'waiting':'ok'}"${a.gate?' id="reporter-st"':''}><i>${a.gate?'&#9208;':'&#10003;'}</i> ${a.gate?'waiting':'done'}</span><div class="agent-model">sonnet</div></div>
+      </div>`).join('');
+    document.getElementById('feed').innerHTML = d.ledger.map(([t,cls,g,m]) => `<div class="ev"><span class="ev-t">${t}</span><i class="ev-i ${cls}">${g}</i><span class="ev-m">${m}</span></div>`).join('');
+    document.getElementById('gate-kicker').textContent = '⏸ Human gate · the run is paused for you';
+    document.getElementById('gate-q').innerHTML = d.gate.q;
+    document.getElementById('gate-meta').innerHTML = d.gate.meta;
+    document.getElementById('toast-sub').innerHTML = d.toast;
+    // reset the gate interaction + toast on every switch
+    const gate = document.getElementById('gate');
+    gate.classList.remove('approved');
+    if (!document.getElementById('nudge')) {
+      const n = document.createElement('div'); n.className='nudge'; n.id='nudge'; n.textContent='this button is real — try it';
+      gate.prepend(n);
+    }
+    document.getElementById('gate-actions').innerHTML =
+      '<button class="btn approve" onclick="approveGate()">Approve</button><button class="btn deny" onclick="approveGate(true)">Decline</button>';
+    document.getElementById('wf-status').outerHTML = '<span class="st waiting" id="wf-status"><i>⏸</i> gate at the review step</span>';
+    document.getElementById('toast').classList.remove('show');
+    el = 72;
+  }
+
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-studio]');
+    if (b) renderStudio(b.getAttribute('data-studio'));
+  });
+
+  let t = new Date(); t.setHours(14, 7, 32);
+  setInterval(() => {
+    t = new Date(t.getTime() + 1000);
+    const c = document.getElementById('clock'); if (c) c.textContent = `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+  }, 1000);
+
+  let el = 72;
+  let elTimer = setInterval(() => {
+    const e = document.getElementById('wf-el'); if (e) e.textContent = `${pad(Math.floor(el/60))}:${pad(el%60)}`;
+  }, 1000);
+
+  function addEvent(cls, glyph, msg) {
+    el += 2;
+    const feed = document.getElementById('feed');
+    const e = document.createElement('div');
+    e.className = 'ev new';
+    e.innerHTML = `<span class="ev-t">+${pad(Math.floor(el/60))}:${pad(el%60)}</span>` +
+                  `<i class="ev-i ${cls}">${glyph}</i><span class="ev-m">${msg}</span>`;
+    feed.prepend(e);
+    while (feed.children.length > 12) feed.lastElementChild.remove();
+  }
+
+  function approveGate(declined) {
+    const d = STUDIOS[active];
+    const gate = document.getElementById('gate');
+    const nudge = document.getElementById('nudge'); if (nudge) nudge.remove();
+    document.getElementById('gate-actions').innerHTML =
+      `<span class="st ${declined ? 'idle' : 'ok'}" style="font-size:12px;padding:8px 16px"><i>${declined ? '○' : '✓'}</i> ${declined ? 'Declined' : 'Approved'} by maya · guest</span>`;
+    if (declined) {
+      document.getElementById('gate-kicker').textContent = '○ Declined — the run stops here, auditably';
+      document.getElementById('gate-meta').innerHTML = 'in a real studio the requester is notified with your reason · <b>nothing ships without a human</b>';
+      addEvent('failed', '✕', `<b>${gateStepName()}</b> declined by maya — run halted`);
+      return;
+    }
+    gate.classList.add('approved');
+    document.getElementById('gate-kicker').textContent = '✓ Approved — the run continues';
+    const tlGate = document.getElementById('tl-gate');
+    tlGate.classList.remove('gated'); tlGate.classList.add('done');
+    document.getElementById('tl-gate-sub').textContent = '✓ approved by you';
+    const tlFile = document.getElementById('tl-file');
+    tlFile.classList.add('active');
+    document.getElementById('tl-file-sub').textContent = '◐ running…';
+    document.getElementById('wf-status').outerHTML = '<span class="st running" id="wf-status"><i>◐</i> running</span>';
+    const rst = document.getElementById('reporter-st');
+    if (rst) rst.outerHTML = '<span class="st running" id="reporter-st"><i>◐</i> working</span>';
+    const rtask = document.getElementById('reporter-task'); if (rtask) rtask.textContent = d.approve.working;
+    addEvent('ok', '✓', `<b>${gateStepName()}</b> approved by <b>maya · guest</b> — timestamped`);
+    setTimeout(() => addEvent('running', '⚒', `<b>${d.agents[3].name}</b> tool call ${d.approve.tool}`), 1600);
+    setTimeout(() => {
+      tlFile.classList.remove('active'); tlFile.classList.add('done');
+      document.getElementById('tl-file-sub').innerHTML = d.approve.filed;
+      document.getElementById('wf-status').outerHTML = '<span class="st ok" id="wf-status"><i>✓</i> succeeded</span>';
+      const r2 = document.getElementById('reporter-st'); if (r2) r2.outerHTML = '<span class="st ok" id="reporter-st"><i>✓</i> done</span>';
+      const rt2 = document.getElementById('reporter-task'); if (rt2) rt2.textContent = d.approve.done;
+      addEvent('ok', '✓', d.approve.final);
+    }, 3400);
+    setTimeout(() => document.getElementById('toast').classList.add('show'), 4600);
+  }
+
+  function gateStepName() {
+    const g = STUDIOS[active].steps.find(s => s.gate);
+    return g ? g.gate : 'approve';
+  }
+
+  renderStudio('legal-compliance');
+</script>
+<script>
+  // Conversion CTA: a no-account visitor who wants to start goes to the
+  // onboarding page (get access from an admin, self-host, or keep exploring).
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-action="start-studio"]');
+    if (b) { e.preventDefault(); window.location.href = '/onboarding.html'; }
+  });
+</script>
+</body>
+</html>

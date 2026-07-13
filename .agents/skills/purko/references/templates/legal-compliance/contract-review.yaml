@@ -1,0 +1,57 @@
+apiVersion: purko.io/v1alpha1
+kind: Workflow
+metadata:
+  name: contract-review
+  namespace: ai-agents
+spec:
+  description: "Contract intake → clause extraction → risk analysis → due diligence → compliance report"
+  parallelism: 2
+  failureStrategy: continueOnError
+  parameters:
+    clientName: "GlobalTech Inc"
+    contractType: "SaaS vendor agreement"
+    contractContent: "Review the attached vendor agreement for a cloud SaaS platform including data processing terms, SLA commitments, and liability caps."
+    jurisdiction: "US - Delaware"
+  steps:
+    - name: analyze-contract
+      agentRef:
+        name: contract-analyst
+      input:
+        raw: |
+          Review contract for ${parameters.clientName}.
+          Type: ${parameters.contractType}
+          Jurisdiction: ${parameters.jurisdiction}
+          Content: ${parameters.contractContent}
+          Extract all key terms, obligations, and risk flags.
+
+    - name: check-regulatory
+      agentRef:
+        name: regulatory-monitor
+      dependsOn: [analyze-contract]
+      input:
+        raw: |
+          Check regulatory compliance for ${parameters.contractType} in ${parameters.jurisdiction}.
+          Contract findings: ${steps.analyze-contract.output}
+          Flag any regulatory requirements that affect this agreement.
+
+    - name: research-counterparty
+      agentRef:
+        name: due-diligence-researcher
+      dependsOn: [analyze-contract]
+      input:
+        raw: |
+          Conduct due diligence on the counterparty in this ${parameters.contractType}.
+          Client: ${parameters.clientName}
+          Contract context: ${steps.analyze-contract.output}
+
+    - name: compile-report
+      agentRef:
+        name: compliance-reporter
+      dependsOn: [analyze-contract, check-regulatory, research-counterparty]
+      input:
+        raw: |
+          Compile a compliance report for ${parameters.clientName} contract review.
+          Contract analysis: ${steps.analyze-contract.output}
+          Regulatory check: ${steps.check-regulatory.output}
+          Due diligence: ${steps.research-counterparty.output}
+          Produce an executive-ready report with risk rating and recommendations.

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purko — Welcome · Proposal O v2 (Atelier onboarding)</title>
+<style>
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+@font-face { font-family: 'Fraunces'; src: url('/assets/fonts/fraunces-600.woff2') format('woff2'); font-weight: 500 600; font-style: normal; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-500.woff2') format('woff2'); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url('/assets/fonts/inter-600.woff2') format('woff2'); font-weight: 600; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/assets/fonts/jetbrains-mono-500.woff2') format('woff2'); font-weight: 500; }
+</style>
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     PROPOSAL O v2 — Atelier onboarding
+     The "signed in, but no workspace" state for the GCP cluster:
+     social login succeeded, but the identity maps to no Purko
+     workspace. Instead of a 403 or an immediate paywall, three
+     paths — demo studio, request access, get your own — with
+     subscription tiers as the third path, not the front door.
+     Same Atelier language as O-atelier.html. Demo data;
+     pricing is placeholder.
+     ═══════════════════════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper:     #f7f3ec;
+    --paper-2:   #fffdf8;
+    --line:      #e2d9c8;
+    --line-ink:  #1c1917;
+    --ink:       #1c1917;
+    --ink-2:     #57534e;
+    --ink-3:     #9c948a;
+    --terra:     #0f8f86;   /* Purko brand teal — Paper-theme --accent */
+    --terra-bg:  #e1edea;
+    --ok:        #2e7d4f;
+    --ok-bg:     #e2eee6;
+    --warn:      #b07d10;
+    --warn-bg:   #f4ead2;
+    --run:       #2c5faa;
+    --run-bg:    #e0e8f4;
+    --serif: 'Fraunces', serif;
+    --sans: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 36px 90px; }
+
+  /* ── masthead ───────────────────────────────────────────── */
+  .masthead {
+    display: flex; align-items: baseline; gap: 20px;
+    padding: 26px 0 18px; border-bottom: 2px solid var(--line-ink);
+  }
+  .masthead .brand { font-family: var(--serif); font-weight: 600; font-size: 22px; letter-spacing: -0.3px; }
+  .masthead .brand em { font-style: italic; font-weight: 400; color: var(--terra); }
+  .masthead .where { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .masthead .right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .who { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+  .who i {
+    width: 26px; height: 26px; border-radius: 50%; font-style: normal;
+    background: var(--ink); color: var(--paper);
+    display: grid; place-items: center; font-size: 11px; font-weight: 600;
+  }
+  .who .via { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+  .btn-ghost {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500;
+    color: var(--ink-2); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 15px; cursor: pointer; transition: all .15s;
+  }
+  .btn-ghost:hover { border-color: var(--ink-2); color: var(--ink); }
+
+  /* ── headline ───────────────────────────────────────────── */
+  .headline {
+    font-family: var(--serif); font-weight: 400; font-size: 38px;
+    line-height: 1.22; letter-spacing: -0.5px;
+    padding: 52px 0 14px; max-width: 760px;
+  }
+  .headline b { font-weight: 600; }
+  .headline em { font-style: italic; color: var(--terra); }
+  .subline { color: var(--ink-2); font-size: 15px; max-width: 640px; margin-bottom: 8px; }
+  .subline-2 { color: var(--ink-3); font-size: 13px; max-width: 640px; margin-bottom: 46px; }
+  .subline-2 code { font-family: var(--mono); font-size: 11.5px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+
+  /* ── three paths ────────────────────────────────────────── */
+  .paths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 72px; }
+  @media (max-width: 900px) { .paths { grid-template-columns: 1fr; } }
+  .path {
+    background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 28px 26px 24px; display: flex; flex-direction: column; gap: 0;
+    position: relative;
+    box-shadow: 0 1px 0 var(--line), 0 10px 28px rgba(28,25,23,0.04);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .path:hover { transform: translateY(-2px); box-shadow: 0 1px 0 var(--line), 0 16px 36px rgba(28,25,23,0.08); }
+  .path-no {
+    font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-3);
+    margin-bottom: 14px;
+  }
+  .path h3 { font-family: var(--serif); font-weight: 600; font-size: 21px; letter-spacing: -0.2px; margin-bottom: 10px; }
+  .path p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 20px; flex: 1; }
+  .path .hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 12px; }
+  .path.primary { border-color: var(--ink); border-width: 1.5px; }
+  .path.primary::before {
+    content: 'most popular first step'; position: absolute; top: -9px; left: 22px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--ink); color: var(--paper); border-radius: 999px; padding: 3px 10px;
+  }
+
+  .btn {
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    border-radius: 999px; padding: 11px 24px; cursor: pointer;
+    border: 1px solid var(--ink); transition: all .15s; text-align: center;
+  }
+  .btn.solid { background: var(--ink); color: var(--paper); }
+  .btn.solid:hover { background: #000; box-shadow: 0 4px 14px rgba(28,25,23,0.25); }
+  .btn.outline { background: transparent; color: var(--ink); }
+  .btn.outline:hover { background: var(--paper); }
+  .btn.terra { background: var(--terra); border-color: var(--terra); color: #fff; }
+  .btn.terra:hover { background: #0b756e; box-shadow: 0 4px 14px rgba(15,143,134,0.3); }
+
+  .req-row { display: flex; gap: 8px; }
+  .req-row input {
+    flex: 1; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+    color: var(--ink); font-family: var(--sans); font-size: 12.5px; padding: 10px 15px; outline: none;
+  }
+  .req-row input:focus { border-color: var(--ink-2); }
+  .req-row .btn { padding: 10px 16px; font-size: 12.5px; }
+
+  /* demo preview strip inside path 1 */
+  .demo-strip {
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    margin-bottom: 18px; background: var(--paper);
+  }
+  .demo-strip .bar { display: flex; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .demo-strip .bar i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .demo-strip .row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .demo-strip .row + .row { border-top: 1px dotted var(--line); }
+  .demo-strip .row b { color: var(--ink-2); font-weight: 500; }
+  .demo-strip .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+  .demo-strip .d-run { background: var(--run); animation: pulse 1.8s ease-in-out infinite; }
+  .demo-strip .d-ok { background: var(--ok); }
+  .demo-strip .d-warn { background: var(--warn); animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* ── anatomy: what you're buying ────────────────────────── */
+  .anatomy { display: grid; grid-template-columns: 460px minmax(0, 1fr); gap: 44px; align-items: start; margin-bottom: 72px; }
+  @media (max-width: 900px) { .anatomy { grid-template-columns: 1fr; } }
+
+  /* miniature studio */
+  .mini {
+    background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 18px; box-shadow: 0 1px 0 var(--line), 0 14px 34px rgba(28,25,23,0.06);
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    position: sticky; top: 20px;
+  }
+  .mini .m-head { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1.5px solid var(--line-ink); margin-bottom: 12px; }
+  .mini .m-brand { font-family: var(--serif); font-size: 13px; color: var(--ink); font-weight: 600; }
+  .mini .m-brand em { font-style: italic; font-weight: 400; color: var(--terra); }
+  .mini .m-live { margin-left: auto; color: var(--ok); display: flex; align-items: center; gap: 5px; }
+  .mini .m-live i { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .num {
+    display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--terra); color: #fff; font-family: var(--serif); font-style: italic;
+    font-size: 10.5px; flex: 0 0 auto; line-height: 1;
+  }
+
+  .mini .m-gate {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--warn-bg); border-left: 3px solid var(--warn); border-radius: 4px;
+    padding: 8px 10px; margin-bottom: 12px; color: var(--ink-2);
+  }
+  .mini .m-gate .m-btn { margin-left: auto; background: var(--ink); color: var(--paper); border-radius: 999px; padding: 2px 9px; font-size: 9px; }
+
+  .mini .m-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .mini .m-tl { flex: 1; display: flex; align-items: center; }
+  .mini .m-node { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ok); background: var(--ok); flex: 0 0 auto; }
+  .mini .m-node.on { background: var(--paper-2); border-color: var(--run); box-shadow: 0 0 0 3px var(--run-bg); }
+  .mini .m-node.q { background: var(--paper-2); border-color: var(--ink-3); }
+  .mini .m-link { flex: 1; height: 2px; background: var(--line); }
+  .mini .m-link.done { background: var(--ok); }
+
+  .mini .m-agents { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; }
+  .mini .m-agent {
+    width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--serif); font-size: 10px; color: var(--ink-2);
+    background: var(--paper); border: 1px solid var(--line);
+  }
+  .mini .m-agent.on { border: 1.5px solid var(--run); color: var(--run); }
+
+  .mini .m-ledger { border-top: 1px dotted var(--line); }
+  .mini .m-ev { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px dotted var(--line); align-items: baseline; }
+  .mini .m-ev b { color: var(--ink-2); font-weight: 500; }
+  .mini .m-ev .t { color: var(--ink-3); font-size: 9px; }
+
+  .mini .m-foot { display: flex; gap: 8px; margin-top: 11px; align-items: center; flex-wrap: wrap; }
+  .mini .m-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; display: inline-flex; gap: 5px; align-items: center; color: var(--ink-2); }
+
+  /* annotation list */
+  .anno { display: flex; flex-direction: column; }
+  .anno-item { display: flex; gap: 16px; padding: 15px 0; border-bottom: 1px dotted var(--line); }
+  .anno-item:first-child { padding-top: 4px; }
+  .anno-item:last-child { border-bottom: none; }
+  .anno-item .num { margin-top: 3px; }
+  .anno-item h4 { font-family: var(--serif); font-size: 16.5px; font-weight: 600; letter-spacing: -0.2px; }
+  .anno-item h4 em { font-style: italic; font-weight: 400; color: var(--ink-2); }
+  .anno-item p { font-size: 13px; color: var(--ink-2); line-height: 1.55; margin-top: 3px; }
+  .tier-chip {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    border-radius: 999px; padding: 2.5px 9px; margin-left: 10px; vertical-align: 2px;
+    display: inline-block;
+  }
+  .tier-chip.community { border: 1px solid var(--line); color: var(--ink-3); }
+  .tier-chip.pro { background: var(--terra); color: #fff; }
+
+  /* ── plans ──────────────────────────────────────────────── */
+  h2.plans-title {
+    font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: -0.4px;
+    padding-bottom: 12px; margin-bottom: 6px; border-bottom: 1px solid var(--line-ink);
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  h2.plans-title b { font-weight: 600; }
+  h2.plans-title small { font-family: var(--mono); font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); }
+  .plans-sub { color: var(--ink-3); font-size: 13.5px; margin-bottom: 30px; }
+
+  .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+  @media (max-width: 900px) { .plans { grid-template-columns: 1fr; } }
+  .plan {
+    background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 30px 28px 26px; display: flex; flex-direction: column; position: relative;
+  }
+  .plan.featured { border: 1.5px solid var(--terra); box-shadow: 0 14px 36px rgba(15,143,134,0.10); }
+  .plan.featured::before {
+    content: 'runs this cluster'; position: absolute; top: -9px; left: 24px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--terra); color: #fff; border-radius: 999px; padding: 3px 10px;
+  }
+  .plan-name { font-family: var(--serif); font-weight: 600; font-size: 20px; }
+  .plan-for { font-size: 12px; color: var(--ink-3); margin: 3px 0 18px; }
+  .plan-price { font-family: var(--serif); font-size: 34px; font-weight: 500; letter-spacing: -0.5px; }
+  .plan-price small { font-family: var(--sans); font-size: 12px; color: var(--ink-3); font-weight: 400; letter-spacing: 0; }
+  .plan-price .tilde { color: var(--terra); }
+  .plan ul { list-style: none; margin: 20px 0 24px; flex: 1; }
+  .plan li {
+    font-size: 13px; color: var(--ink-2); padding: 6px 0 6px 22px; position: relative;
+    border-bottom: 1px dotted var(--line);
+  }
+  .plan li:last-child { border-bottom: none; }
+  .plan li::before { content: '✓'; position: absolute; left: 2px; color: var(--ok); font-size: 12px; }
+  .plan li.soon::before { content: '◷'; color: var(--ink-3); }
+  .plan li.soon { color: var(--ink-3); }
+  .plan .helm {
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-2);
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 9px 11px; margin-bottom: 16px; overflow-x: auto; white-space: nowrap;
+  }
+  .plan .helm b { color: var(--terra); font-weight: 500; }
+
+  .fineprint { margin-top: 34px; font-size: 11.5px; color: var(--ink-3); line-height: 1.7; max-width: 700px; }
+  .fineprint b { color: var(--ink-2); font-weight: 500; }
+
+  /* ── pending state (request sent) ───────────────────────── */
+  .pending {
+    display: none; align-items: center; gap: 12px;
+    background: var(--ok-bg); border: 1px solid #c4dccd; border-radius: 8px;
+    padding: 12px 15px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
+  }
+  .pending.show { display: flex; }
+  .pending i { font-style: normal; color: var(--ok); }
+
+  .prop-tag {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
+    text-align: center; padding: 7px; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 1.5px; color: var(--ink-3);
+    background: rgba(247,243,236,0.92); border-top: 1px solid var(--line);
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <span class="brand">Purko <em>Mission Control</em></span>
+    <span class="where">local · not connected</span>
+    <div class="right">
+      <span class="who"><i>?</i>not connected</span>
+    </div>
+  </div>
+
+  <div class="headline">
+    Welcome. You're not connected<br>
+    to a Purko studio <em>yet.</em>
+  </div>
+  <div class="subline">
+    The skill couldn't find a Purko cluster in your kubeconfig, and no
+    workspace URL is configured. Three ways forward — pick whichever fits.
+  </div>
+  <div class="subline-2">
+    Think this is a mistake? Check <code>kubectl config get-contexts</code> —
+    if your cluster is there, tell the skill: <code>open mission control</code> and it will retry.
+  </div>
+
+  <div class="paths">
+
+    <!-- PATH 1: demo -->
+    <div class="path primary">
+      <div class="path-no">i.</div>
+      <h3>Wander the demo studio</h3>
+      <div class="demo-strip">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="row"><span class="dot d-run"></span><b>campaign-delivery</b>&nbsp;step 3/5 running…</div>
+        <div class="row"><span class="dot d-warn"></span><b>copy-review</b>&nbsp;waiting on approval</div>
+        <div class="row"><span class="dot d-ok"></span><b>incident-summary</b>&nbsp;succeeded · $0.14</div>
+      </div>
+      <p>
+        A live, read-only Mission Control over a working agency team — five agents,
+        real workflows, an approval gate you can press. No setup, nothing to install.
+      </p>
+      <a class="btn solid" href="/demo.html" style="text-decoration:none;display:block">Enter the demo studio →</a>
+      <div class="hint">runs entirely on your machine · no cluster needed</div>
+    </div>
+
+    <!-- PATH 2: request access -->
+    <div class="path">
+      <div class="path-no">ii.</div>
+      <h3>Join your team's workspace</h3>
+      <p>
+        If your team already runs Purko, ask your admin for either a
+        <b>kubeconfig</b> for the cluster or the <b>dashboard token</b> —
+        then paste the token on the Mission Control login screen, or tell
+        the skill: <code>add my workspace &lt;url&gt;</code>.
+      </p>
+      <div class="hint">hosted workspaces with request-access ship in a later version</div>
+    </div>
+
+    <!-- PATH 3: own purko -->
+    <div class="path">
+      <div class="path-no">iii.</div>
+      <h3>Open your own studio</h3>
+      <p>
+        Purko is a Kubernetes-native platform for AI agent teams — the skill can
+        install it on any cluster you have (minikube included): just say
+        <code>install purko</code>. Or run it hosted, once workspaces launch.
+      </p>
+      <button class="btn terra" onclick="document.getElementById('anatomy').scrollIntoView({behavior:'smooth'})">See what you'd own ↓</button>
+      <div class="hint">community edition is open source · apache-2.0 core</div>
+    </div>
+  </div>
+
+  <!-- ANATOMY: what you're buying -->
+  <h2 class="plans-title" id="anatomy"><span>A studio, <b>annotated</b>.</span><small>what a subscription buys</small></h2>
+  <div class="plans-sub">Not seats in a chat app — a working system. Here's the anatomy of the thing you'd own:</div>
+
+  <div class="anatomy">
+    <!-- miniature mission control -->
+    <div class="mini">
+      <div class="m-head">
+        <span class="m-brand">Purko <em>Mission Control</em></span>
+        <span class="m-live"><i></i>LIVE</span>
+      </div>
+
+      <div class="m-gate">
+        <span class="num">3</span>
+        <span>file report to client record?</span>
+        <span class="m-btn">Approve</span>
+      </div>
+
+      <div class="m-row">
+        <span class="num">2</span>
+        <div class="m-tl">
+          <span class="m-node"></span><span class="m-link done"></span>
+          <span class="m-node"></span><span class="m-link done"></span>
+          <span class="m-node on"></span><span class="m-link"></span>
+          <span class="m-node q"></span>
+        </div>
+        <span>contract-review · run #118</span>
+      </div>
+
+      <div class="m-agents">
+        <span class="num">1</span>
+        <span class="m-agent on">C</span>
+        <span class="m-agent on">R</span>
+        <span class="m-agent">D</span>
+        <span class="m-agent">P</span>
+        <span>4 agents · 2 working</span>
+      </div>
+
+      <div class="m-ledger">
+        <div class="m-ev"><span class="num">4</span><span class="t">+00:41</span><span><b>due-diligence</b> sanctions.check "GlobalTech"</span></div>
+        <div class="m-ev"><span class="t" style="width:17px"></span><span class="t">+00:36</span><span><b>regulatory</b> caselaw.search "DE §18-305"</span></div>
+        <div class="m-ev"><span class="t" style="width:17px"></span><span class="t">+00:22</span><span><b>analyze</b> ✓ 42 clauses · 2 cautions</span></div>
+      </div>
+
+      <div class="m-foot">
+        <span class="m-chip"><span class="num">5</span>memory: 312 facts</span>
+        <span class="m-chip"><span class="num">6</span>hosted · sso · roles</span>
+      </div>
+    </div>
+
+    <!-- annotations -->
+    <div class="anno">
+      <div class="anno-item">
+        <span class="num">1</span>
+        <div>
+          <h4>Agents — <em>your AI staff</em><span class="tier-chip community">community</span></h4>
+          <p>Specialists, not a chatbot: each has a role, a model, and real tools via MCP — registries, document stores, your intake system. You define them once; the whole team can use them.</p>
+        </div>
+      </div>
+      <div class="anno-item">
+        <span class="num">2</span>
+        <div>
+          <h4>Workflows — <em>work, orchestrated</em><span class="tier-chip community">community</span></h4>
+          <p>Multi-step pipelines with parallel branches, retries, and webhook or scheduled triggers. The contract arrives, the webhook fires, four agents get to work — no copy-paste choreography.</p>
+        </div>
+      </div>
+      <div class="anno-item">
+        <span class="num">3</span>
+        <div>
+          <h4>Human gates — <em>you stay in charge</em><span class="tier-chip community">community</span></h4>
+          <p>Nothing irreversible happens without a signature. Runs pause at the steps you mark, and your decision is recorded with your name and a timestamp.</p>
+        </div>
+      </div>
+      <div class="anno-item">
+        <span class="num">4</span>
+        <div>
+          <h4>The ledger — <em>a defensible audit trail</em><span class="tier-chip pro">pro · full history</span></h4>
+          <p>Every tool call, every output, every approval — logged. When someone asks "how did you reach this conclusion," you answer with the chain, not a shrug. Pro keeps the full searchable history.</p>
+        </div>
+      </div>
+      <div class="anno-item">
+        <span class="num">5</span>
+        <div>
+          <h4>Memory — <em>a team that remembers</em><span class="tier-chip pro">pro</span></h4>
+          <p>Agents recall what they learned in past runs — your brand voice, your clause preferences, last quarter's findings — instead of starting from zero every morning.</p>
+        </div>
+      </div>
+      <div class="anno-item">
+        <span class="num">6</span>
+        <div>
+          <h4>Hosted studio &amp; SSO — <em>we run the machines</em><span class="tier-chip pro">pro</span></h4>
+          <p>A managed workspace on this cluster: your team signs in with Google or GitHub, roles decide who may approve and who may only watch, and upgrades are our problem.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANS -->
+  <h2 class="plans-title" id="plans"><span><b>Plans</b>, plainly.</span><small>placeholder pricing</small></h2>
+  <div class="plans-sub">Every tier runs the same core: agents, workflows, approval gates, Mission Control.</div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Community</div>
+      <div class="plan-for">self-hosted · your cluster, your rules</div>
+      <div class="plan-price">$0 <small>forever</small></div>
+      <ul>
+        <li>Agents, workflows &amp; approval gates</li>
+        <li>Mission Control + dashboard</li>
+        <li>Token-mode auth</li>
+        <li>MCP tools &amp; agent skills</li>
+        <li>Community support</li>
+      </ul>
+      <div class="helm">helm install purko <b>oci://ghcr.io/purko-io/purko/purko</b></div>
+      <a class="btn outline" href="/install.html" style="text-decoration:none;display:block">Install guide →</a>
+    </div>
+
+    <div class="plan featured">
+      <div class="plan-name">Pro</div>
+      <div class="plan-for">hosted or self-hosted · growing teams</div>
+      <div class="plan-price"><span class="tilde">~</span>$49 <small>/ seat / month</small></div>
+      <ul>
+        <li>Everything in Community</li>
+        <li>SSO &amp; role-based access (this login)</li>
+        <li>Agent memory &amp; semantic recall</li>
+        <li>Execution history &amp; audit log</li>
+        <li>Hosted workspace on this cluster</li>
+        <li>Priority support</li>
+      </ul>
+      <!-- TODO(GCP SaaS launch): swap this mailto for the hosted signup URL
+           (e.g. https://app.purko.io) once the GCP SaaS instance is live. -->
+      <a class="btn terra" data-contact="georgievski@purko.io" data-subject="Purko hosted — launch list" href="mailto:georgievski@purko.io?subject=Purko%20hosted%20%E2%80%94%20launch%20list" style="text-decoration:none;display:block">Join the launch list →</a>
+      <div class="hint">hosted workspaces are pre-launch — or tell the skill: <code style="font-family:var(--mono);font-size:10px;background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:1px 5px">add my workspace &lt;url&gt;</code> if you already have one</div>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-for">regulated &amp; air-gapped environments</div>
+      <div class="plan-price">Let's talk</div>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>Dedicated or on-prem cluster</li>
+        <li class="soon">Per-user Kubernetes impersonation</li>
+        <li class="soon">SAML / SCIM provisioning</li>
+        <li>Security review &amp; SLAs</li>
+      </ul>
+      <a class="btn outline" data-contact="georgievski@purko.io" data-subject="Purko enterprise" href="mailto:georgievski@purko.io?subject=Purko%20enterprise" style="text-decoration:none;display:block">Talk to us →</a>
+    </div>
+  </div>
+
+  <div class="fineprint">
+    <b>Why you're seeing this page:</b> Mission Control shows live cluster data, and
+    right now there's no cluster to show. The demo studio is always open, the skill
+    can install Purko for you, and your team's admin can hand you a token in seconds.
+  </div>
+</div>
+
+<div class="prop-tag">purko · not connected · placeholder pricing</div>
+<script>
+  // Contact CTAs: the mailto href works when a mail client is configured;
+  // as a fallback (many browsers have none), copy the address and confirm
+  // inline so the button always does something visible.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-contact]');
+    if (!a) return;
+    var email = a.getAttribute('data-contact');
+    if (navigator.clipboard) { navigator.clipboard.writeText(email).catch(function(){}); }
+    var note = a.parentNode.querySelector('.contact-note');
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'contact-note';
+      note.style.cssText = 'font-size:12px;margin-top:8px;color:var(--ink-2)';
+      a.parentNode.insertBefore(note, a.nextSibling);
+    }
+    note.innerHTML = 'Opening your mail app… no mail app? Email <b style="user-select:all">' + email + '</b> (copied).';
+  });
+</script>
+</body>
+</html>

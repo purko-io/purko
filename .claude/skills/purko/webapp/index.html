@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purko — Mission Control</title>
+<link rel="manifest" href="/assets/manifest.json">
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <span class="brand">Purko <em>Mission Control</em></span>
+    <div class="right">
+      <span id="dashboard-slot"></span>
+      <span id="version-slot"></span>
+      <span class="live" id="live-dot"><i></i>LIVE</span>
+      <span class="who" id="whoami-chip"></span>
+    </div>
+  </div>
+
+  <div id="gate-slot"></div>
+  <div id="nudge-slot"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="cols">
+    <section>
+      <h2>Workflows</h2>
+      <div id="workflows"></div>
+    </section>
+    <div>
+      <section>
+        <h2>Agents</h2>
+        <div id="agents"></div>
+      </section>
+      <section>
+        <h2>Ledger <small>derived from live snapshots</small></h2>
+        <div class="feed" id="ledger"></div>
+      </section>
+      <section>
+        <h2>Outputs</h2>
+        <div id="outputs-slot"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="login-overlay" id="login-overlay" hidden>
+  <form class="login-card" id="login-form">
+    <div class="login-title">Purko <em>Mission Control</em></div>
+    <p class="login-sub">This cluster requires a dashboard token.</p>
+    <div class="tok-row">
+      <input type="password" id="login-token" placeholder="Paste dashboard token" autocomplete="off">
+      <button class="btn approve" type="submit">Connect</button>
+    </div>
+    <p class="login-error" id="login-error"></p>
+    <p class="login-note">Tip: the skill can fetch this automatically when your
+      kubeconfig may read the <code>purko-dashboard-token</code> secret.</p>
+  </form>
+</div>
+
+<script type="module" src="/assets/main.js"></script>
+</body>
+</html>
